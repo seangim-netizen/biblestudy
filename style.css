@@ -118,19 +118,96 @@ body.theme-sepia {
   margin-bottom: 10px;
   font-size: var(--verse-font-size);
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
 }
 
+/* 터치 / 낭독 선택 구절 하이라이트 */
+.verse-card.selected-verse,
 .verse-card.is-reading {
   background-color: #fff3cd !important;
-  border-color: #ffeeba !important;
-  box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+  border-color: #f1c40f !important;
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
 }
 
 .verse-num {
   font-weight: bold;
   color: var(--primary-color);
   margin-right: 6px;
+}
+
+/* 하단 플레이어 박스 스타일 */
+.tts-player-box {
+  position: fixed;
+  bottom: var(--nav-height);
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border-top: 1px solid #e2d7c7;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 99;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.tts-player-box.hidden {
+  display: none !important;
+}
+
+.tts-player-row1, .tts-player-row2 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.tts-ctrl-btn {
+  flex: 1;
+  max-width: 120px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f8f8f8;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.tts-play-btn {
+  background-color: #e67e22;
+  color: white;
+  border-color: #d35400;
+}
+
+.tts-sub-btn {
+  flex: 1;
+  max-width: 110px;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fafafa;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tts-sub-btn.active {
+  background-color: #f39c12;
+  color: white;
+  border-color: #d35400;
+}
+
+.tts-sub-btn.btn-stop {
+  background-color: #e74c3c;
+  color: white;
+  border-color: #c0392b;
+}
+
+body:has(.tts-player-box:not(.hidden)) .app-content {
+  margin-bottom: calc(var(--nav-height) + 80px);
 }
 
 /* 하단 네비게이션 */

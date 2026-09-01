@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>개인용 성경앱</title>
-  <link rel="stylesheet" href="style.css?v=500">
+  <link rel="stylesheet" href="style.css?v=600">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -32,6 +32,20 @@
     <div id="bibleViewer" class="bible-viewer-container"></div>
   </main>
 
+  <!-- 하단 음성 플레이어 컨트롤 박스 (재생 시 자동 표시) -->
+  <div id="ttsPlayerBox" class="tts-player-box hidden">
+    <div class="tts-player-row1">
+      <button id="btnAudioTTSPrev" class="tts-ctrl-btn">⏮ 이전</button>
+      <button id="btnAudioTTSPlay2" class="tts-ctrl-btn tts-play-btn">❚❚ 일시정지</button>
+      <button id="btnAudioTTSNext" class="tts-ctrl-btn">다음 ⏭</button>
+    </div>
+    <div class="tts-player-row2">
+      <button id="btnTTSSpeed" class="tts-sub-btn">🐢 1.0x</button>
+      <button id="btnTTSRepeat" class="tts-sub-btn">🔄 연속</button>
+      <button id="btnAudioTTSStop" class="tts-sub-btn btn-stop">■ 정지</button>
+    </div>
+  </div>
+
   <!-- 하단 네비게이션 -->
   <nav class="bottom-nav">
     <div class="nav-control-group">
@@ -54,6 +68,6 @@
 
   <!-- 서비스 워커 및 DB 스크립트 -->
   <script src="bible_db_66.js"></script>
-  <script src="app.js?v=500"></script>
+  <script src="app.js?v=600"></script>
 </body>
 </html>

@@ -40,17 +40,21 @@ const TRANSLATIONS = {
 let state = {
   book: "창세기",
   chapter: 1,
-  translation: "KG"
+  translation: "KG",
+  selectedVerse: 1 // 선택된 절 번호 (기본 1절)
 };
 
-// TTS 관련 상태
+// TTS 상태
 let isTTSSpeaking = false;
 let isTTSPaused = false;
 let currentTTSIndex = 0;
 let ttsSpeechItems = [];
+let ttsRate = 1.0; // 1.0, 1.2, 1.5, 0.8
+let repeatMode = 'CONTINUOUS'; // 'CONTINUOUS', 'CHAPTER', 'VERSE'
 
 // DOM 요소
-let quickBookSelect, quickChapterSelect, primaryTranslationSelect, btnPrevChapter, btnNextChapter, bibleViewerEl, btnAudioTTSPlay;
+let quickBookSelect, quickChapterSelect, primaryTranslationSelect, btnPrevChapter, btnNextChapter, bibleViewerEl;
+let btnAudioTTSPlay, btnAudioTTSPlay2, btnAudioTTSPrev, btnAudioTTSNext, btnTTSSpeed, btnTTSRepeat, btnAudioTTSStop, ttsPlayerBox;
 
 function init() {
   quickBookSelect = document.getElementById("quickBookSelect");
@@ -59,7 +63,16 @@ function init() {
   btnPrevChapter = document.getElementById("btnPrevChapter");
   btnNextChapter = document.getElementById("btnNextChapter");
   bibleViewerEl = document.getElementById("bibleViewer");
+
+  // 헤더 및 하단 플레이어 컨트롤
   btnAudioTTSPlay = document.getElementById("btnAudioTTSPlay");
+  btnAudioTTSPlay2 = document.getElementById("btnAudioTTSPlay2");
+  btnAudioTTSPrev = document.getElementById("btnAudioTTSPrev");
+  btnAudioTTSNext = document.getElementById("btnAudioTTSNext");
+  btnTTSSpeed = document.getElementById("btnTTSSpeed");
+  btnTTSRepeat = document.getElementById("btnTTSRepeat");
+  btnAudioTTSStop = document.getElementById("btnAudioTTSStop");
+  ttsPlayerBox = document.getElementById("ttsPlayerBox");
 
   // 책 선택 드롭다운 채우기
   quickBookSelect.innerHTML = "";
@@ -75,6 +88,7 @@ function init() {
     stopTTS();
     state.book = e.target.value;
     state.chapter = 1;
+    state.selectedVerse = 1;
     updateChapterSelect();
     renderBible();
   });
@@ -82,19 +96,25 @@ function init() {
   quickChapterSelect.addEventListener("change", (e) => {
     stopTTS();
     state.chapter = parseInt(e.target.value);
+    state.selectedVerse = 1;
     renderBible();
   });
 
   primaryTranslationSelect.addEventListener("change", (e) => {
-    stopTTS();
+    // 역본을 변경해도 하이라이트(state.selectedVerse) 및 TTS 지점 유지
     state.translation = e.target.value;
     renderBible();
+    if (isTTSSpeaking) {
+      // 재생 중이면 역본 변경 시 선택 구절부터 재개
+      playFromVerse(state.selectedVerse);
+    }
   });
 
   btnPrevChapter.addEventListener("click", () => {
     if (state.chapter > 1) {
       stopTTS();
       state.chapter--;
+      state.selectedVerse = 1;
       updateChapterSelect();
       renderBible();
     }
@@ -105,14 +125,20 @@ function init() {
     if (bInfo && state.chapter < bInfo.chapters) {
       stopTTS();
       state.chapter++;
+      state.selectedVerse = 1;
       updateChapterSelect();
       renderBible();
     }
   });
 
-  if (btnAudioTTSPlay) {
-    btnAudioTTSPlay.addEventListener("click", togglePlayTTS);
-  }
+  // 재생 버튼 이벤트
+  if (btnAudioTTSPlay) btnAudioTTSPlay.addEventListener("click", togglePlayTTS);
+  if (btnAudioTTSPlay2) btnAudioTTSPlay2.addEventListener("click", togglePlayTTS);
+  if (btnAudioTTSStop) btnAudioTTSStop.addEventListener("click", stopTTS);
+  if (btnAudioTTSPrev) btnAudioTTSPrev.addEventListener("click", playPrevTTS);
+  if (btnAudioTTSNext) btnAudioTTSNext.addEventListener("click", playNextTTS);
+  if (btnTTSSpeed) btnTTSSpeed.addEventListener("click", toggleTTSSpeed);
+  if (btnTTSRepeat) btnTTSRepeat.addEventListener("click", toggleRepeatMode);
 
   updateChapterSelect();
   renderBible();
@@ -180,21 +206,53 @@ function renderBible() {
 
     const verses = db[state.book][String(state.chapter)];
     verses.forEach((rawText, idx) => {
-      // 새번역 동그라미(○) 및 기호 완전 제거
+      const verseNum = idx + 1;
       let cleanText = rawText.replace(/[○◯⚪🔴⚫\u25cb]/g, "").trim();
       const card = document.createElement("div");
       card.className = "verse-card";
-      card.setAttribute("data-verse", idx + 1);
-      card.innerHTML = `<span class="verse-num">${idx + 1}</span> ${cleanText}`;
+      card.setAttribute("data-verse", verseNum);
+      
+      // 구절 터치/클릭 이벤트
+      card.addEventListener("click", () => {
+        onVerseClick(verseNum);
+      });
+
+      card.innerHTML = `<span class="verse-num">${verseNum}</span> ${cleanText}`;
       bibleViewerEl.appendChild(card);
     });
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // 선택된 구절 하이라이트 복원
+    highlightVerse(state.selectedVerse);
+  });
+}
+
+// 구절 클릭/터치 시 동작
+function onVerseClick(verseNum) {
+  state.selectedVerse = verseNum;
+  highlightVerse(verseNum);
+
+  if (isTTSSpeaking) {
+    // 재생 중 터치하면 터치한 구절부터 바로 낭독 시작
+    playFromVerse(verseNum);
+  }
+}
+
+// 특정 구절 노란색 하이라이트
+function highlightVerse(verseNum) {
+  bibleViewerEl.querySelectorAll(".verse-card").forEach(card => {
+    const v = parseInt(card.getAttribute("data-verse"));
+    if (v === verseNum) {
+      card.classList.add("selected-verse");
+      card.classList.add("is-reading");
+    } else {
+      card.classList.remove("selected-verse");
+      card.classList.remove("is-reading");
+    }
   });
 }
 
 // -------------------------------------------------------------
-// TTS 음성 낭독 핵심 로직
+// TTS 음성 낭독 컨트롤
 // -------------------------------------------------------------
 function togglePlayTTS() {
   if (!('speechSynthesis' in window)) {
@@ -202,7 +260,7 @@ function togglePlayTTS() {
     return;
   }
 
-  // iOS Safari 터치 이벤트 직후 무음 Utterance로 TTS 엔진 즉시 깨우기 (User Gesture unlock)
+  // iOS Safari touch unlock
   try {
     const unlockUtterance = new SpeechSynthesisUtterance("");
     window.speechSynthesis.speak(unlockUtterance);
@@ -212,18 +270,19 @@ function togglePlayTTS() {
     if (isTTSPaused) {
       window.speechSynthesis.resume();
       isTTSPaused = false;
-      btnAudioTTSPlay.textContent = "❚❚ 일시정지";
+      updateTTSPlayButtons(true);
     } else {
       window.speechSynthesis.pause();
       isTTSPaused = true;
-      btnAudioTTSPlay.textContent = "▶ 재생";
+      updateTTSPlayButtons(false);
     }
   } else {
-    startTTS();
+    // 터치하거나 선택해둔 절부터 재생 시작
+    playFromVerse(state.selectedVerse || 1);
   }
 }
 
-function startTTS() {
+function playFromVerse(startVerse) {
   window.speechSynthesis.cancel();
 
   const cards = bibleViewerEl.querySelectorAll(".verse-card");
@@ -231,20 +290,19 @@ function startTTS() {
 
   ttsSpeechItems = [];
   cards.forEach(card => {
-    const verseNum = card.getAttribute("data-verse");
+    const verseNum = parseInt(card.getAttribute("data-verse"));
     let textToSpeak = card.textContent || "";
-    
-    // 대괄호, 꺾쇠, 소괄호, 새번역 ○ 제거
+
     textToSpeak = textToSpeak.replace(/\[[^\]]*\]/g, "");
     textToSpeak = textToSpeak.replace(/<[^>]*>/g, "");
     textToSpeak = textToSpeak.replace(/\([^)]*\)/g, "");
-    textToSpeak = textToSpeak.replace(/○/g, "");
-    textToSpeak = textToSpeak.replace(/^\s*(\d+)\s+/, "").trim(); // 맨 앞 절번호만 제거
+    textToSpeak = textToSpeak.replace(/[○◯⚪🔴⚫\u25cb]/g, "");
+    textToSpeak = textToSpeak.replace(/^\s*(\d+)\s+/, "").trim();
 
     if (textToSpeak) {
       ttsSpeechItems.push({
         element: card,
-        verse: parseInt(verseNum),
+        verse: verseNum,
         text: textToSpeak
       });
     }
@@ -252,10 +310,16 @@ function startTTS() {
 
   if (ttsSpeechItems.length === 0) return;
 
+  // startVerse에 해당하는 인덱스 찾기
+  let startIndex = ttsSpeechItems.findIndex(item => item.verse === startVerse);
+  if (startIndex === -1) startIndex = 0;
+
   isTTSSpeaking = true;
   isTTSPaused = false;
-  currentTTSIndex = 0;
-  btnAudioTTSPlay.textContent = "❚❚ 일시정지";
+  currentTTSIndex = startIndex;
+
+  if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
+  updateTTSPlayButtons(true);
 
   speakNextTTS();
 }
@@ -264,15 +328,24 @@ function speakNextTTS() {
   if (!isTTSSpeaking) return;
 
   if (currentTTSIndex >= ttsSpeechItems.length) {
-    // 한 장 완료 시 다음 장으로 자동 이동 후 연속 낭독
-    const bInfo = BIBLE_BOOKS.find(b => b.name === state.book);
-    if (bInfo && state.chapter < bInfo.chapters) {
-      state.chapter++;
-      updateChapterSelect();
-      renderBible();
-      setTimeout(() => {
-        startTTS();
-      }, 500);
+    // 장 종료 시 반복 모드 처리
+    if (repeatMode === 'CHAPTER') {
+      // 장 반복
+      playFromVerse(1);
+    } else if (repeatMode === 'CONTINUOUS') {
+      // 연속 재생 (다음 장으로 넘어감)
+      const bInfo = BIBLE_BOOKS.find(b => b.name === state.book);
+      if (bInfo && state.chapter < bInfo.chapters) {
+        state.chapter++;
+        state.selectedVerse = 1;
+        updateChapterSelect();
+        renderBible();
+        setTimeout(() => {
+          playFromVerse(1);
+        }, 500);
+      } else {
+        stopTTS();
+      }
     } else {
       stopTTS();
     }
@@ -280,22 +353,26 @@ function speakNextTTS() {
   }
 
   const item = ttsSpeechItems[currentTTSIndex];
+  state.selectedVerse = item.verse;
 
-  // 읽는 구절 하이라이트 표시
-  bibleViewerEl.querySelectorAll(".verse-card").forEach(el => el.classList.remove("is-reading"));
+  highlightVerse(item.verse);
   if (item.element) {
-    item.element.classList.add("is-reading");
     item.element.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   const utterance = new SpeechSynthesisUtterance(item.text);
-  utterance.lang = state.translation.startsWith("NI") || state.translation.startsWith("NL") || state.translation.startsWith("NK") || state.translation.startsWith("RS") ? "en-US" : "ko-KR";
-  utterance.rate = 1.0;
+  utterance.lang = (state.translation.startsWith("NI") || state.translation.startsWith("NL") || state.translation.startsWith("NK") || state.translation.startsWith("RS")) ? "en-US" : "ko-KR";
+  utterance.rate = ttsRate;
 
   utterance.onend = () => {
     if (isTTSSpeaking && !isTTSPaused) {
-      currentTTSIndex++;
-      speakNextTTS();
+      if (repeatMode === 'VERSE') {
+        // 절 반복
+        speakNextTTS();
+      } else {
+        currentTTSIndex++;
+        speakNextTTS();
+      }
     }
   };
 
@@ -310,14 +387,73 @@ function speakNextTTS() {
   window.speechSynthesis.speak(utterance);
 }
 
+function playPrevTTS() {
+  if (!isTTSSpeaking) return;
+  if (currentTTSIndex > 0) {
+    currentTTSIndex--;
+    const item = ttsSpeechItems[currentTTSIndex];
+    playFromVerse(item.verse);
+  }
+}
+
+function playNextTTS() {
+  if (!isTTSSpeaking) return;
+  if (currentTTSIndex < ttsSpeechItems.length - 1) {
+    currentTTSIndex++;
+    const item = ttsSpeechItems[currentTTSIndex];
+    playFromVerse(item.verse);
+  }
+}
+
+function toggleTTSSpeed() {
+  const rates = [1.0, 1.2, 1.5, 0.8];
+  let currIdx = rates.indexOf(ttsRate);
+  let nextIdx = (currIdx + 1) % rates.length;
+  ttsRate = rates[nextIdx];
+  if (btnTTSSpeed) btnTTSSpeed.textContent = `🐢 ${ttsRate.toFixed(1)}x`;
+
+  if (isTTSSpeaking && !isTTSPaused) {
+    // 배속 변경 시 현재 구절부터 즉시 적용
+    playFromVerse(state.selectedVerse);
+  }
+}
+
+function toggleRepeatMode() {
+  if (repeatMode === 'CONTINUOUS') {
+    repeatMode = 'CHAPTER';
+    if (btnTTSRepeat) {
+      btnTTSRepeat.textContent = "🔁 장반복";
+      btnTTSRepeat.classList.add("active");
+    }
+  } else if (repeatMode === 'CHAPTER') {
+    repeatMode = 'VERSE';
+    if (btnTTSRepeat) {
+      btnTTSRepeat.textContent = "🔂 절반복";
+      btnTTSRepeat.classList.add("active");
+    }
+  } else {
+    repeatMode = 'CONTINUOUS';
+    if (btnTTSRepeat) {
+      btnTTSRepeat.textContent = "🔄 연속";
+      btnTTSRepeat.classList.remove("active");
+    }
+  }
+}
+
 function stopTTS() {
   window.speechSynthesis.cancel();
   isTTSSpeaking = false;
   isTTSPaused = false;
   currentTTSIndex = 0;
   ttsSpeechItems = [];
-  if (btnAudioTTSPlay) btnAudioTTSPlay.textContent = "▶ 재생";
-  bibleViewerEl.querySelectorAll(".verse-card").forEach(el => el.classList.remove("is-reading"));
+  updateTTSPlayButtons(false);
+  if (ttsPlayerBox) ttsPlayerBox.classList.add("hidden");
+}
+
+function updateTTSPlayButtons(isPlaying) {
+  const text = isPlaying ? "❚❚ 일시정지" : "▶ 재생";
+  if (btnAudioTTSPlay) btnAudioTTSPlay.textContent = text;
+  if (btnAudioTTSPlay2) btnAudioTTSPlay2.textContent = text;
 }
 
 if (document.readyState === "complete" || document.readyState === "interactive") {
