@@ -180,8 +180,8 @@ function renderBible() {
 
     const verses = db[state.book][String(state.chapter)];
     verses.forEach((rawText, idx) => {
-      // 본문에서 새번역 동그라미(○) 제거
-      const cleanText = rawText.replace(/○/g, "").trim();
+      // 새번역 동그라미(○) 및 기호 완전 제거
+      let cleanText = rawText.replace(/[○◯⚪🔴⚫\u25cb]/g, "").trim();
       const card = document.createElement("div");
       card.className = "verse-card";
       card.setAttribute("data-verse", idx + 1);
@@ -201,6 +201,12 @@ function togglePlayTTS() {
     alert("이 브라우저는 음성 낭독(TTS)을 지원하지 않습니다.");
     return;
   }
+
+  // iOS Safari 터치 이벤트 직후 무음 Utterance로 TTS 엔진 즉시 깨우기 (User Gesture unlock)
+  try {
+    const unlockUtterance = new SpeechSynthesisUtterance("");
+    window.speechSynthesis.speak(unlockUtterance);
+  } catch (e) {}
 
   if (isTTSSpeaking) {
     if (isTTSPaused) {
