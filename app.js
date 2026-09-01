@@ -516,19 +516,31 @@ function setupMediaSessionHandlers() {
   }
 }
 
-// 앱이 백그라운드로 내려가거나 정지 상태에서 앱 화면을 쓸어 올릴 때의 감지
+// 앱이 백그라운드로 내려가거나 정지 상태에서 앱 화면을 쓸어 올릴 때의 감지 및 iOS 엔진 복구
 document.addEventListener('visibilitychange', function() {
   const bgAudio = document.getElementById('bgSilentAudio');
   if (document.hidden) {
-    // 앱이 화면에서 숨겨질 때 (백그라운드/잠금화면 진입)
+    // 백그라운드 진입 시 재생 중이면 무음 오디오 재생 유지 및 TTS 재개
     if (isTTSSpeaking && !isTTSPaused) {
       if (bgAudio && bgAudio.paused) {
         bgAudio.play().catch(e => console.log("bgAudio play catch on hidden:", e));
       }
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
     } else {
-      // 재생을 멈추고 정지한 상태에서는 백그라운드 무음 오디오도 반드시 정지
       if (bgAudio) {
         bgAudio.pause();
+      }
+    }
+  } else {
+    // 앱으로 다시 돌아올 때 TTS 멈춤 현상 자동 복구
+    if (isTTSSpeaking && !isTTSPaused) {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      if (!window.speechSynthesis.speaking) {
+        speakNextTTS();
       }
     }
   }
