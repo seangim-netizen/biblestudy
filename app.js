@@ -161,92 +161,50 @@ function init() {
   const btnClosePlan = document.getElementById("btnClosePlan");
   const planModal = document.getElementById("planModal");
 
+  // 수동 읽음 체크 버튼
+  const btnToggleReadStatus = document.getElementById("btnToggleReadStatus");
+  if (btnToggleReadStatus) {
+    btnToggleReadStatus.addEventListener("click", () => {
+      toggleChapterRead(state.book, state.chapter);
+    });
+  }
+
   // 설정 모달 열기 / 닫기
   if (btnOpenSettings) {
-    btnOpenSettings.addEventListener("click", () => settingsModal.classList.remove("hidden"));
+    btnOpenSettings.addEventListener("click", () => {
+      settingsModal.classList.remove("hidden");
+      renderPlanTab("BOARD");
+    });
   }
   if (btnCloseSettings) {
     btnCloseSettings.addEventListener("click", () => settingsModal.classList.add("hidden"));
   }
 
-  // 글자 크기 조절
-  let currentFontSize = 1.1; // 기본 rem
-  const updateFontDisplay = () => {
-    document.documentElement.style.setProperty("--verse-font-size", `${currentFontSize.toFixed(2)}rem`);
-    if (fontRatioLabel) fontRatioLabel.textContent = `${currentFontSize.toFixed(1)}x`;
-  };
-
-  if (btnModalFontDec) {
-    btnModalFontDec.addEventListener("click", () => {
-      if (currentFontSize > 0.85) {
-        currentFontSize -= 0.1;
-        updateFontDisplay();
-      }
-    });
-  }
-
-  if (btnModalFontInc) {
-    btnModalFontInc.addEventListener("click", () => {
-      if (currentFontSize < 1.8) {
-        currentFontSize += 0.1;
-        updateFontDisplay();
-      }
-    });
-  }
-
-  // 맑게 / 어둡게 테마
-  if (btnThemeSepia) {
-    btnThemeSepia.addEventListener("click", () => {
-      document.body.classList.remove("theme-dark");
-      document.body.classList.add("theme-sepia");
-      btnThemeSepia.classList.add("active");
-      if (btnThemeDark) btnThemeDark.classList.remove("active");
-    });
-  }
-
-  if (btnThemeDark) {
-    btnThemeDark.addEventListener("click", () => {
-      document.body.classList.remove("theme-sepia");
-      document.body.classList.add("theme-dark");
-      btnThemeDark.classList.add("active");
-      if (btnThemeSepia) btnThemeSepia.classList.remove("active");
-    });
-  }
-
-  // 통독 계획 모달 열기 / 닫기 및 탭 처리
-  if (btnOpenPlan) {
-    btnOpenPlan.addEventListener("click", () => {
-      planModal.classList.remove("hidden");
-      renderPlanTab("MCHEYNE");
-    });
-  }
-  if (btnClosePlan) {
-    btnClosePlan.addEventListener("click", () => planModal.classList.add("hidden"));
-  }
-
+  // 통독 탭 스위칭 (66권 통독표, 맥체인, 1년 1독)
+  const tabBoard = document.getElementById("tabBoard");
   const tabMcheyne = document.getElementById("tabMcheyne");
   const tabYearOne = document.getElementById("tabYearOne");
-  const tabCustom = document.getElementById("tabCustom");
 
-  if (tabMcheyne) {
-    tabMcheyne.addEventListener("click", () => {
-      [tabMcheyne, tabYearOne, tabCustom].forEach(t => t && t.classList.remove("active"));
-      tabMcheyne.classList.add("active");
-      renderPlanTab("MCHEYNE");
-    });
-  }
-  if (tabYearOne) {
-    tabYearOne.addEventListener("click", () => {
-      [tabMcheyne, tabYearOne, tabCustom].forEach(t => t && t.classList.remove("active"));
-      tabYearOne.classList.add("active");
-      renderPlanTab("YEAR_ONE");
-    });
-  }
-  if (tabCustom) {
-    tabCustom.addEventListener("click", () => {
-      [tabMcheyne, tabYearOne, tabCustom].forEach(t => t && t.classList.remove("active"));
-      tabCustom.classList.add("active");
-      renderPlanTab("CUSTOM");
+  const switchTab = (activeTab, type) => {
+    [tabBoard, tabMcheyne, tabYearOne].forEach(t => t && t.classList.remove("active"));
+    if (activeTab) activeTab.classList.add("active");
+    renderPlanTab(type);
+  };
+
+  if (tabBoard) tabBoard.addEventListener("click", () => switchTab(tabBoard, "BOARD"));
+  if (tabMcheyne) tabMcheyne.addEventListener("click", () => switchTab(tabMcheyne, "MCHEYNE"));
+  if (tabYearOne) tabYearOne.addEventListener("click", () => switchTab(tabYearOne, "YEAR_ONE"));
+
+  // 통독 기록 초기화
+  const btnResetHistory = document.getElementById("btnResetHistory");
+  if (btnResetHistory) {
+    btnResetHistory.addEventListener("click", () => {
+      if (confirm("정말로 모든 성경 통독 기록을 초기화하시겠습니까?")) {
+        readHistory = {};
+        saveReadHistory();
+        renderPlanTab("BOARD");
+        updateReadBadgeState();
+      }
     });
   }
 
@@ -273,17 +231,65 @@ function updateChapterSelect() {
   quickChapterSelect.value = state.chapter;
 }
 
-// 통독 계획 탭 콘텐츠 렌더링 (맥체인, 1년 1독, 개인 설정)
+// 통독 읽음 기록 persistence (localStorage)
+let readHistory = JSON.parse(localStorage.getItem("bible_read_history") || "{}");
+
+function saveReadHistory() {
+  localStorage.setItem("bible_read_history", JSON.stringify(readHistory));
+}
+
+function isChapterRead(bookName, chapterNum) {
+  return readHistory[bookName] && readHistory[bookName].includes(chapterNum);
+}
+
+function markChapterRead(bookName, chapterNum) {
+  if (!readHistory[bookName]) {
+    readHistory[bookName] = [];
+  }
+  if (!readHistory[bookName].includes(chapterNum)) {
+    readHistory[bookName].push(chapterNum);
+    saveReadHistory();
+  }
+  updateReadBadgeState();
+}
+
+function toggleChapterRead(bookName, chapterNum) {
+  if (!readHistory[bookName]) {
+    readHistory[bookName] = [];
+  }
+  const idx = readHistory[bookName].indexOf(chapterNum);
+  if (idx === -1) {
+    readHistory[bookName].push(chapterNum);
+  } else {
+    readHistory[bookName].splice(idx, 1);
+  }
+  saveReadHistory();
+  updateReadBadgeState();
+}
+
+function updateReadBadgeState() {
+  const btn = document.getElementById("btnToggleReadStatus");
+  if (!btn) return;
+  const isRead = isChapterRead(state.book, state.chapter);
+  if (isRead) {
+    btn.classList.add("is-read");
+    btn.textContent = "✓ 읽음 완료";
+  } else {
+    btn.classList.remove("is-read");
+    btn.textContent = "✓ 읽음 표시";
+  }
+}
+
+// 통독 계획 탭 콘텐츠 렌더링 (66권 통독표, 맥체인, 1년 1독)
 function renderPlanTab(type) {
   const container = document.getElementById("planTabContent");
   if (!container) return;
   container.innerHTML = "";
 
-  if (type === "MCHEYNE") {
-    const today = new Date();
-    const month = today.getMonth() + 1;
-    const day = today.getDate();
-
+  if (type === "BOARD") {
+    // 66권 전체 통독표 대시보드
+    renderProgressBoard(container);
+  } else if (type === "MCHEYNE") {
     const mcheynePlans = [
       { title: "오늘의 맥체인 통독 (155일차 / 예시)", items: [
         { book: "창세기", ch: 1 },
@@ -324,24 +330,56 @@ function renderPlanTab(type) {
       </div>
     `;
     container.appendChild(card);
-  } else if (type === "CUSTOM") {
-    const card = document.createElement("div");
-    card.className = "plan-card";
-    card.innerHTML = `
-      <div class="plan-card-title"><span>✏️ 개인 맞춤 통독 목표</span></div>
-      <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
-        <label style="font-size:0.9rem; font-weight:bold;">목표 기간:
-          <select id="customGoalDays" style="padding:4px; margin-left:6px; border-radius:4px;">
-            <option value="90">90일 집중 통독</option>
-            <option value="180">180일 반년 통독</option>
-            <option value="365" selected>365일 1년 통독</option>
-          </select>
-        </label>
-        <button class="btn-plan-go" style="align-self:flex-start;" onclick="alert('개인 통독 목표가 저장되었습니다!')">목표 설정 및 시작하기</button>
-      </div>
-    `;
-    container.appendChild(card);
   }
+}
+
+function renderProgressBoard(container) {
+  let totalChapters = 1189;
+  let readCountTotal = 0;
+
+  BIBLE_BOOKS.forEach(book => {
+    const bookRow = document.createElement("div");
+    bookRow.className = "progress-book-row";
+
+    const readList = readHistory[book.name] || [];
+    readCountTotal += readList.length;
+
+    const unit = book.name === "시편" ? "편" : "장";
+
+    const title = document.createElement("div");
+    title.className = "progress-book-name";
+    title.textContent = `${book.name} (${readList.length} / ${book.chapters}${unit})`;
+
+    const flex = document.createElement("div");
+    flex.className = "progress-chapters-flex";
+
+    for (let i = 1; i <= book.chapters; i++) {
+      const dot = document.createElement("div");
+      const isRead = readList.includes(i);
+      dot.className = `progress-chapter-dot ${isRead ? 'checked' : ''}`;
+      dot.textContent = `${i}`;
+
+      dot.addEventListener("click", () => {
+        toggleChapterRead(book.name, i);
+        renderProgressBoard(container);
+      });
+
+      flex.appendChild(dot);
+    }
+
+    bookRow.appendChild(title);
+    bookRow.appendChild(flex);
+    container.appendChild(bookRow);
+  });
+
+  const countEl = document.getElementById("completedChaptersCount");
+  const pctEl = document.getElementById("progressPercentage");
+  const barEl = document.getElementById("progressBarFill");
+
+  if (countEl) countEl.textContent = readCountTotal;
+  const ratio = ((readCountTotal / totalChapters) * 100).toFixed(1);
+  if (pctEl) pctEl.textContent = `${ratio}%`;
+  if (barEl) barEl.style.width = `${ratio}%`;
 }
 
 function navigateFromPlan(book, chapter) {
@@ -413,6 +451,7 @@ function renderBible() {
     } else {
       renderVerseCards(pVerses, null);
     }
+    updateReadBadgeState();
   });
 }
 
@@ -549,6 +588,9 @@ function speakNextTTS() {
   if (!isTTSSpeaking) return;
 
   if (currentTTSIndex >= ttsSpeechItems.length) {
+    // 낭독 재생 완료 시 자동으로 해당 장 '읽음 완료' 처리
+    markChapterRead(state.book, state.chapter);
+
     if (repeatMode === 'CHAPTER') {
       playFromVerse(1);
     } else if (repeatMode === 'CONTINUOUS') {
