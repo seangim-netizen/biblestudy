@@ -41,7 +41,8 @@ let state = {
   book: "창세기",
   chapter: 1,
   translation: "KG",
-  selectedVerse: 1 // 선택된 절 번호 (기본 1절)
+  secondaryTranslation: "NONE",
+  selectedVerse: 1
 };
 
 // TTS 상태
@@ -53,13 +54,14 @@ let ttsRate = 1.0; // 1.0, 1.2, 1.5, 0.8
 let repeatMode = 'CONTINUOUS'; // 'CONTINUOUS', 'CHAPTER', 'VERSE'
 
 // DOM 요소
-let quickBookSelect, quickChapterSelect, primaryTranslationSelect, btnPrevChapter, btnNextChapter, bibleViewerEl;
+let quickBookSelect, quickChapterSelect, primaryTranslationSelect, secondaryTranslationSelect, btnPrevChapter, btnNextChapter, bibleViewerEl;
 let btnAudioTTSPlay, btnAudioTTSPlay2, btnAudioTTSPrev, btnAudioTTSNext, btnTTSSpeed, btnTTSRepeat, btnAudioTTSStop, ttsPlayerBox;
 
 function init() {
   quickBookSelect = document.getElementById("quickBookSelect");
   quickChapterSelect = document.getElementById("quickChapterSelect");
   primaryTranslationSelect = document.getElementById("primaryTranslation");
+  secondaryTranslationSelect = document.getElementById("secondaryTranslation");
   btnPrevChapter = document.getElementById("btnPrevChapter");
   btnNextChapter = document.getElementById("btnNextChapter");
   bibleViewerEl = document.getElementById("bibleViewer");
@@ -101,14 +103,19 @@ function init() {
   });
 
   primaryTranslationSelect.addEventListener("change", (e) => {
-    // 역본을 변경해도 하이라이트(state.selectedVerse) 및 TTS 지점 유지
     state.translation = e.target.value;
     renderBible();
     if (isTTSSpeaking) {
-      // 재생 중이면 역본 변경 시 선택 구절부터 재개
       playFromVerse(state.selectedVerse);
     }
   });
+
+  if (secondaryTranslationSelect) {
+    secondaryTranslationSelect.addEventListener("change", (e) => {
+      state.secondaryTranslation = e.target.value;
+      renderBible();
+    });
+  }
 
   btnPrevChapter.addEventListener("click", () => {
     if (state.chapter > 1) {
@@ -192,40 +199,65 @@ function renderBible() {
   title.textContent = `${state.book} ${state.chapter}${unit}`;
   bibleViewerEl.appendChild(title);
 
-  ensureTranslationLoaded(state.translation, (success) => {
-    const tInfo = TRANSLATIONS[state.translation] || TRANSLATIONS.KG;
-    const db = window[tInfo.varName];
+  // 주역본 및 대조역본 로드
+  ensureTranslationLoaded(state.translation, (pSuccess) => {
+    const pInfo = TRANSLATIONS[state.translation] || TRANSLATIONS.KG;
+    const pDb = window[pInfo.varName];
 
-    if (!success || !db || !db[state.book] || !db[state.book][String(state.chapter)]) {
+    if (!pSuccess || !pDb || !pDb[state.book] || !pDb[state.book][String(state.chapter)]) {
       const err = document.createElement("div");
       err.style.color = "red";
       err.style.textAlign = "center";
       err.style.padding = "20px";
-      err.textContent = `[${tInfo.name}] 데이터를 불러올 수 없거나 로드 중입니다.`;
+      err.textContent = `[${pInfo.name}] 데이터를 불러올 수 없거나 로드 중입니다.`;
       bibleViewerEl.appendChild(err);
       return;
     }
 
-    const verses = db[state.book][String(state.chapter)];
-    verses.forEach((rawText, idx) => {
-      const verseNum = idx + 1;
-      let cleanText = rawText.replace(/[○◯⚪🔴⚫\u25cb]/g, "").trim();
-      const card = document.createElement("div");
-      card.className = "verse-card";
-      card.setAttribute("data-verse", verseNum);
-      
-      // 구절 터치/클릭 이벤트
-      card.addEventListener("click", () => {
-        onVerseClick(verseNum);
-      });
+    const pVerses = pDb[state.book][String(state.chapter)];
 
-      card.innerHTML = `<span class="verse-num">${verseNum}</span> ${cleanText}`;
-      bibleViewerEl.appendChild(card);
+    const hasSecondary = state.secondaryTranslation && state.secondaryTranslation !== "NONE";
+    if (hasSecondary) {
+      ensureTranslationLoaded(state.secondaryTranslation, (sSuccess) => {
+        const sInfo = TRANSLATIONS[state.secondaryTranslation];
+        const sDb = sInfo ? window[sInfo.varName] : null;
+        const sVerses = (sDb && sDb[state.book] && sDb[state.book][String(state.chapter)]) ? sDb[state.book][String(state.chapter)] : [];
+
+        renderVerseCards(pVerses, sVerses);
+      });
+    } else {
+      renderVerseCards(pVerses, null);
+    }
+  });
+}
+
+function renderVerseCards(pVerses, sVerses) {
+  pVerses.forEach((rawText, idx) => {
+    const verseNum = idx + 1;
+    let cleanPrimary = rawText.replace(/[○◯⚪🔴⚫\u25cb]/g, "").trim();
+
+    const card = document.createElement("div");
+    card.className = "verse-card";
+    card.setAttribute("data-verse", verseNum);
+
+    card.addEventListener("click", () => {
+      onVerseClick(verseNum);
     });
 
-    // 선택된 구절 하이라이트 복원
-    highlightVerse(state.selectedVerse);
+    let html = `<div class="verse-primary"><span class="verse-num">${verseNum}</span> ${cleanPrimary}</div>`;
+
+    if (sVerses && sVerses[idx]) {
+      let cleanSecondary = sVerses[idx].replace(/[○◯⚪🔴⚫\u25cb]/g, "").trim();
+      const sInfo = TRANSLATIONS[state.secondaryTranslation];
+      const sName = sInfo ? sInfo.name : "";
+      html += `<div class="verse-secondary"><span class="verse-num">[${sName}]</span> ${cleanSecondary}</div>`;
+    }
+
+    card.innerHTML = html;
+    bibleViewerEl.appendChild(card);
   });
+
+  highlightVerse(state.selectedVerse);
 }
 
 // 구절 클릭/터치 시 동작
@@ -293,7 +325,8 @@ function playFromVerse(startVerse) {
   ttsSpeechItems = [];
   cards.forEach(card => {
     const verseNum = parseInt(card.getAttribute("data-verse"));
-    let textToSpeak = card.textContent || "";
+    const primaryEl = card.querySelector(".verse-primary");
+    let textToSpeak = primaryEl ? primaryEl.textContent : (card.textContent || "");
 
     textToSpeak = textToSpeak.replace(/\[[^\]]*\]/g, "");
     textToSpeak = textToSpeak.replace(/<[^>]*>/g, "");
