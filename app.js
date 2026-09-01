@@ -147,6 +147,46 @@ function init() {
   if (btnTTSSpeed) btnTTSSpeed.addEventListener("click", toggleTTSSpeed);
   if (btnTTSRepeat) btnTTSRepeat.addEventListener("click", toggleRepeatMode);
 
+  // 글자 크기 및 밝게/어둡게 테마 컨트롤
+  const btnFontDec = document.getElementById("btnFontDec");
+  const btnFontInc = document.getElementById("btnFontInc");
+  const btnThemeToggle = document.getElementById("btnThemeToggle");
+
+  let currentFontSize = 1.1; // 기본 rem
+  if (btnFontDec) {
+    btnFontDec.addEventListener("click", () => {
+      if (currentFontSize > 0.85) {
+        currentFontSize -= 0.1;
+        document.documentElement.style.setProperty("--verse-font-size", `${currentFontSize.toFixed(2)}rem`);
+      }
+    });
+  }
+
+  if (btnFontInc) {
+    btnFontInc.addEventListener("click", () => {
+      if (currentFontSize < 1.8) {
+        currentFontSize += 0.1;
+        document.documentElement.style.setProperty("--verse-font-size", `${currentFontSize.toFixed(2)}rem`);
+      }
+    });
+  }
+
+  let isDarkTheme = false;
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener("click", () => {
+      isDarkTheme = !isDarkTheme;
+      if (isDarkTheme) {
+        document.body.classList.remove("theme-sepia");
+        document.body.classList.add("theme-dark");
+        btnThemeToggle.textContent = "🌙";
+      } else {
+        document.body.classList.remove("theme-dark");
+        document.body.classList.add("theme-sepia");
+        btnThemeToggle.textContent = "☀️";
+      }
+    });
+  }
+
   setupMediaSessionHandlers();
 
   updateChapterSelect();
@@ -248,9 +288,8 @@ function renderVerseCards(pVerses, sVerses) {
 
     if (sVerses && sVerses[idx]) {
       let cleanSecondary = sVerses[idx].replace(/[○◯⚪🔴⚫\u25cb]/g, "").trim();
-      const sInfo = TRANSLATIONS[state.secondaryTranslation];
-      const sName = sInfo ? sInfo.name : "";
-      html += `<div class="verse-secondary"><span class="verse-num">[${sName}]</span> ${cleanSecondary}</div>`;
+      // 대조 성경에서 [성경이름] 제외하고 순수 본문만 깔끔하게 표시
+      html += `<div class="verse-secondary">${cleanSecondary}</div>`;
     }
 
     card.innerHTML = html;
@@ -441,7 +480,7 @@ function playNextTTS() {
 }
 
 function toggleTTSSpeed() {
-  const rates = [1.0, 1.2, 1.5, 0.8];
+  const rates = [0.8, 0.9, 1.0, 1.1, 1.2];
   let currIdx = rates.indexOf(ttsRate);
   let nextIdx = (currIdx + 1) % rates.length;
   ttsRate = rates[nextIdx];

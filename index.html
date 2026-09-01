@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>개인용 성경앱</title>
-  <link rel="stylesheet" href="style.css?v=1000">
+  <link rel="stylesheet" href="style.css?v=1100">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -21,7 +21,10 @@
         <select id="quickBookSelect" class="quick-select"></select>
         <select id="quickChapterSelect" class="quick-select"></select>
       </div>
-      <div class="header-player">
+      <div class="header-controls">
+        <button id="btnFontDec" class="btn-tool" title="글자 작게">가-</button>
+        <button id="btnFontInc" class="btn-tool" title="글자 크게">가+</button>
+        <button id="btnThemeToggle" class="btn-tool" title="테마 변경">☀️</button>
         <button id="btnAudioTTSPlay" class="btn-header-player">▶ 재생</button>
       </div>
     </div>
@@ -49,7 +52,7 @@
   <!-- 하단 네비게이션 -->
   <nav class="bottom-nav">
     <div class="nav-control-group">
-      <button id="btnPrevChapter" class="btn-nav">◀ 이전 장</button>
+      <button id="btnPrevChapter" class="btn-arrow-nav">◀</button>
       <div class="select-wrapper">
         <select id="primaryTranslation">
           <option value="KG" selected>개역개정</option>
@@ -76,13 +79,13 @@
           <option value="RSV">RSV (영어)</option>
         </select>
       </div>
-      <button id="btnNextChapter" class="btn-nav">다음 장 ▶</button>
+      <button id="btnNextChapter" class="btn-arrow-nav">▶</button>
     </div>
   </nav>
 
   <!-- 서비스 워커 및 DB 스크립트 -->
   <script src="bible_db_66.js"></script>
-  <script src="app.js?v=1000"></script>
+  <script src="app.js?v=1100"></script>
 
   <!-- 백그라운드 재생 및 잠금화면 유지용 무음 MP3 오디오 (iOS 최적화) -->
   <audio id="bgSilentAudio" loop preload="auto" src="data:audio/mpeg;base64,SUQ3BAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//5DAAAAAAAAAAAAAFhpbmcAAAAPAAAAUAAADnAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw//5MYxAEAEAAAAUAAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxAYACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxBwACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"></audio>
