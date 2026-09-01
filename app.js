@@ -398,16 +398,15 @@ function playFromVerse(startVerse) {
   speakNextTTS();
 }
 
+let ttsKeepAliveTimer = null;
+
 function speakNextTTS() {
   if (!isTTSSpeaking) return;
 
   if (currentTTSIndex >= ttsSpeechItems.length) {
-    // 장 종료 시 반복 모드 처리
     if (repeatMode === 'CHAPTER') {
-      // 장 반복
       playFromVerse(1);
     } else if (repeatMode === 'CONTINUOUS') {
-      // 연속 재생 (다음 장으로 넘어감)
       const bInfo = BIBLE_BOOKS.find(b => b.name === state.book);
       if (bInfo && state.chapter < bInfo.chapters) {
         state.chapter++;
@@ -434,14 +433,23 @@ function speakNextTTS() {
     item.element.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
+  // iOS Safari SpeechSynthesis 백그라운드 멈춤 타이머 해제
+  if (ttsKeepAliveTimer) {
+    clearInterval(ttsKeepAliveTimer);
+    ttsKeepAliveTimer = null;
+  }
+
   const utterance = new SpeechSynthesisUtterance(item.text);
   utterance.lang = (state.translation.startsWith("NI") || state.translation.startsWith("NL") || state.translation.startsWith("NK") || state.translation.startsWith("RS")) ? "en-US" : "ko-KR";
   utterance.rate = ttsRate;
 
   utterance.onend = () => {
+    if (ttsKeepAliveTimer) {
+      clearInterval(ttsKeepAliveTimer);
+      ttsKeepAliveTimer = null;
+    }
     if (isTTSSpeaking && !isTTSPaused) {
       if (repeatMode === 'VERSE') {
-        // 절 반복
         speakNextTTS();
       } else {
         currentTTSIndex++;
@@ -452,6 +460,10 @@ function speakNextTTS() {
 
   utterance.onerror = (e) => {
     console.error("TTS Error:", e);
+    if (ttsKeepAliveTimer) {
+      clearInterval(ttsKeepAliveTimer);
+      ttsKeepAliveTimer = null;
+    }
     if (isTTSSpeaking && !isTTSPaused) {
       currentTTSIndex++;
       speakNextTTS();
@@ -459,6 +471,22 @@ function speakNextTTS() {
   };
 
   window.speechSynthesis.speak(utterance);
+
+  // iOS 백그라운드에서 speechSynthesis가 멈추거나 마비되는 것을 막는 주기적 킵어라이브 Watchdog (14초 감시)
+  ttsKeepAliveTimer = setInterval(() => {
+    if (isTTSSpeaking && !isTTSPaused) {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      } else if (!window.speechSynthesis.speaking) {
+        clearInterval(ttsKeepAliveTimer);
+        ttsKeepAliveTimer = null;
+        speakNextTTS();
+      }
+    } else {
+      clearInterval(ttsKeepAliveTimer);
+      ttsKeepAliveTimer = null;
+    }
+  }, 3000);
 }
 
 function playPrevTTS() {
@@ -487,7 +515,6 @@ function toggleTTSSpeed() {
   if (btnTTSSpeed) btnTTSSpeed.textContent = `🐢 ${ttsRate.toFixed(1)}x`;
 
   if (isTTSSpeaking && !isTTSPaused) {
-    // 배속 변경 시 현재 구절부터 즉시 적용
     playFromVerse(state.selectedVerse);
   }
 }
@@ -515,6 +542,10 @@ function toggleRepeatMode() {
 }
 
 function stopTTS() {
+  if (ttsKeepAliveTimer) {
+    clearInterval(ttsKeepAliveTimer);
+    ttsKeepAliveTimer = null;
+  }
   window.speechSynthesis.cancel();
   isTTSSpeaking = false;
   isTTSPaused = false;
@@ -565,7 +596,7 @@ function updateMediaSession() {
       artist: `성경 낭독 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
       album: "개인용 성경앱",
       artwork: [
-        { src: 'app_logo.png', sizes: '512x512', type: 'image/png' }
+        { src: 'symbol_logo.png', sizes: '512x512', type: 'image/png' }
       ]
     });
   }
@@ -592,7 +623,6 @@ function setupMediaSessionHandlers() {
 document.addEventListener('visibilitychange', function() {
   const bgAudio = document.getElementById('bgSilentAudio');
   if (document.hidden) {
-    // 백그라운드 진입 시 재생 중이면 무음 오디오 재생 유지 및 TTS 재개
     if (isTTSSpeaking && !isTTSPaused) {
       if (bgAudio && bgAudio.paused) {
         bgAudio.play().catch(e => console.log("bgAudio play catch on hidden:", e));
@@ -606,7 +636,6 @@ document.addEventListener('visibilitychange', function() {
       }
     }
   } else {
-    // 앱으로 다시 돌아올 때 TTS 멈춤 현상 자동 복구
     if (isTTSSpeaking && !isTTSPaused) {
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
