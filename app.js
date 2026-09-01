@@ -266,11 +266,33 @@ function init() {
       if (confirm("정말로 모든 성경 통독 기록을 초기화하시겠습니까?")) {
         readHistory = {};
         saveReadHistory();
-        renderFullBoardPageTab();
+        renderSettingsBoardGrid();
         updateReadBadgeState();
       }
     });
   }
+
+  // 설정 모달 내 통독 계획 탭 스위칭 (맥체인 / 1년 1독)
+  const tabMcheyne = document.getElementById("tabMcheyne");
+  const tabYearOne = document.getElementById("tabYearOne");
+
+  if (tabMcheyne) {
+    tabMcheyne.addEventListener("click", () => {
+      tabMcheyne.classList.add("active");
+      if (tabYearOne) tabYearOne.classList.remove("active");
+      renderPlanTab("MCHEYNE");
+    });
+  }
+
+  if (tabYearOne) {
+    tabYearOne.addEventListener("click", () => {
+      tabYearOne.classList.add("active");
+      if (tabMcheyne) tabMcheyne.classList.remove("active");
+      renderPlanTab("YEAR_ONE");
+    });
+  }
+
+  renderPlanTab("MCHEYNE");
 
   setupMediaSessionHandlers();
 
@@ -315,6 +337,7 @@ function markChapterRead(bookName, chapterNum) {
     saveReadHistory();
   }
   updateReadBadgeState();
+  renderSettingsBoardGrid();
 }
 
 function toggleChapterRead(bookName, chapterNum) {
@@ -329,6 +352,7 @@ function toggleChapterRead(bookName, chapterNum) {
   }
   saveReadHistory();
   updateReadBadgeState();
+  renderSettingsBoardGrid();
 }
 
 // 본문 하단 읽음 완료 버튼 상태 업데이트
@@ -511,8 +535,8 @@ function navigateFromPlan(book, chapter) {
   state.selectedVerse = 1;
   updateChapterSelect();
   renderBible();
-  const planModal = document.getElementById("planModal");
-  if (planModal) planModal.classList.add("hidden");
+  const settingsModal = document.getElementById("settingsModal");
+  if (settingsModal) settingsModal.classList.add("hidden");
 }
 
 // 동적 역본 파일 로더
@@ -605,13 +629,13 @@ function renderVerseCards(pVerses, sVerses) {
   highlightVerse(state.selectedVerse);
 }
 
-// 구절 클릭/터치 시 동작
+// 구절 클릭/터치 시 동작 (재생 중이 아닐 때는 순수 하이라이트만 동작, 재생 시작되지 않음)
 function onVerseClick(verseNum) {
   state.selectedVerse = verseNum;
   highlightVerse(verseNum);
 
   if (isTTSSpeaking) {
-    // 재생 중 터치하면 터치한 구절부터 바로 낭독 시작
+    // 이미 재생 중일 때만 터치한 구절부터 이어서 낭독
     playFromVerse(verseNum);
   }
 }

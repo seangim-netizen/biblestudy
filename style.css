@@ -580,10 +580,10 @@ body.theme-dark .verse-card.is-reading {
   margin: 0 2px;
 }
 
-/* 하단 플레이어 박스 스타일 */
+/* 하단 플레이어 박스 스타일 - 하단 네비게이션바 바로 위에 정갈하게 위치 */
 .tts-player-box {
   position: fixed;
-  bottom: var(--nav-height);
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 10px));
   left: 0;
   right: 0;
   background-color: var(--header-bg);
@@ -592,8 +592,8 @@ body.theme-dark .verse-card.is-reading {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  z-index: 99;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  z-index: 101;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
