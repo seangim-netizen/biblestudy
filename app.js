@@ -140,6 +140,8 @@ function init() {
   if (btnTTSSpeed) btnTTSSpeed.addEventListener("click", toggleTTSSpeed);
   if (btnTTSRepeat) btnTTSRepeat.addEventListener("click", toggleRepeatMode);
 
+  setupMediaSessionHandlers();
+
   updateChapterSelect();
   renderBible();
 }
@@ -448,13 +450,89 @@ function stopTTS() {
   ttsSpeechItems = [];
   updateTTSPlayButtons(false);
   if (ttsPlayerBox) ttsPlayerBox.classList.add("hidden");
+
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (bgAudio) {
+    bgAudio.pause();
+  }
+
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = "none";
+  }
 }
 
 function updateTTSPlayButtons(isPlaying) {
   const text = isPlaying ? "❚❚ 일시정지" : "▶ 재생";
   if (btnAudioTTSPlay) btnAudioTTSPlay.textContent = text;
   if (btnAudioTTSPlay2) btnAudioTTSPlay2.textContent = text;
+
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (isPlaying && !isTTSPaused) {
+    if (bgAudio && bgAudio.paused) {
+      bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
+    }
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = "playing";
+    }
+  } else {
+    if (bgAudio) {
+      bgAudio.pause();
+    }
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = "paused";
+    }
+  }
+  updateMediaSession();
 }
+
+function updateMediaSession() {
+  if ('mediaSession' in navigator && window.MediaMetadata) {
+    const unit = state.book === "시편" ? "편" : "장";
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: `${state.book} ${state.chapter}${unit} ${state.selectedVerse || 1}절`,
+      artist: `성경 낭독 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
+      album: "개인용 성경앱",
+      artwork: [
+        { src: 'app_logo.png', sizes: '512x512', type: 'image/png' }
+      ]
+    });
+  }
+}
+
+function setupMediaSessionHandlers() {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => {
+      togglePlayTTS();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      togglePlayTTS();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      playPrevTTS();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      playNextTTS();
+    });
+  }
+}
+
+// 앱이 백그라운드로 내려가거나 정지 상태에서 앱 화면을 쓸어 올릴 때의 감지
+document.addEventListener('visibilitychange', function() {
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (document.hidden) {
+    // 앱이 화면에서 숨겨질 때 (백그라운드/잠금화면 진입)
+    if (isTTSSpeaking && !isTTSPaused) {
+      if (bgAudio && bgAudio.paused) {
+        bgAudio.play().catch(e => console.log("bgAudio play catch on hidden:", e));
+      }
+    } else {
+      // 재생을 멈추고 정지한 상태에서는 백그라운드 무음 오디오도 반드시 정지
+      if (bgAudio) {
+        bgAudio.pause();
+      }
+    }
+  }
+});
 
 if (document.readyState === "complete" || document.readyState === "interactive") {
   init();
