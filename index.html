@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>개인용 성경앱</title>
-  <link rel="stylesheet" href="style.css?v=1200">
+  <link rel="stylesheet" href="style.css?v=1300">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,16 +15,15 @@
   <header class="app-header">
     <div class="header-row">
       <div class="header-logo-area">
-        <img src="symbol_logo.png?v=1200" alt="로그인처치" class="header-logo-img">
+        <img src="header_logo.png?v=1300" alt="로그인처치" class="header-logo-img">
       </div>
       <div class="quick-nav-dropdowns">
         <select id="quickBookSelect" class="quick-select"></select>
         <select id="quickChapterSelect" class="quick-select"></select>
       </div>
       <div class="header-controls">
-        <button id="btnFontDec" class="btn-tool" title="글자 작게">가-</button>
-        <button id="btnFontInc" class="btn-tool" title="글자 크게">가+</button>
-        <button id="btnThemeToggle" class="btn-tool" title="테마 변경">☀️</button>
+        <button id="btnOpenPlan" class="btn-header-plan">📅 통독</button>
+        <button id="btnOpenSettings" class="btn-header-icon" title="설정">⚙️</button>
         <button id="btnAudioTTSPlay" class="btn-header-player">▶ 재생</button>
       </div>
     </div>
@@ -46,6 +45,53 @@
       <button id="btnTTSSpeed" class="tts-sub-btn">🐢 1.0x</button>
       <button id="btnTTSRepeat" class="tts-sub-btn">🔄 연속</button>
       <button id="btnAudioTTSStop" class="tts-sub-btn btn-stop">■ 정지</button>
+    </div>
+  </div>
+
+  <!-- 통독 계획 모달 -->
+  <div id="planModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📅 성경 통독 계획</h3>
+        <button id="btnClosePlan" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="plan-tabs">
+          <button id="tabMcheyne" class="plan-tab active">맥체인 통독</button>
+          <button id="tabYearOne" class="plan-tab">1년 1독</button>
+          <button id="tabCustom" class="plan-tab">개인 설정</button>
+        </div>
+        <div id="planTabContent" class="plan-tab-content">
+          <!-- 탭 콘텐츠 동적 생성 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 설정 모달 (글씨크기 및 맑게/어둡게 화면모드) -->
+  <div id="settingsModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⚙️ 화면 및 폰트 설정</h3>
+        <button id="btnCloseSettings" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label class="setting-label">화면 테마 모드</label>
+          <div class="theme-options">
+            <button id="btnThemeSepia" class="theme-btn active">☀️ 맑게 (세피아)</button>
+            <button id="btnThemeDark" class="theme-btn">🌙 어둡게 (다크)</button>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label">글자 크기 조절</label>
+          <div class="font-controls-row">
+            <button id="btnModalFontDec" class="btn-setting-font">가- (작게)</button>
+            <span id="fontRatioLabel" class="font-ratio-display">1.1x</span>
+            <button id="btnModalFontInc" class="btn-setting-font">가+ (크게)</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -85,7 +131,7 @@
 
   <!-- 서비스 워커 및 DB 스크립트 -->
   <script src="bible_db_66.js"></script>
-  <script src="app.js?v=1200"></script>
+  <script src="app.js?v=1300"></script>
 
   <!-- 백그라운드 재생 및 잠금화면 유지용 무음 MP3 오디오 (iOS 최적화) -->
   <audio id="bgSilentAudio" loop preload="auto" src="data:audio/mpeg;base64,SUQ3BAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//5DAAAAAAAAAAAAAFhpbmcAAAAPAAAAUAAADnAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw//5MYxAEAEAAAAUAAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxAYACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxBwACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"></audio>

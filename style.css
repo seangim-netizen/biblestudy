@@ -117,6 +117,27 @@ body.theme-dark {
   cursor: pointer;
 }
 
+.btn-header-plan {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-header-icon {
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
 .btn-header-player {
   background-color: var(--accent-color);
   color: white;
@@ -126,6 +147,182 @@ body.theme-dark {
   font-weight: bold;
   font-size: 0.88rem;
   cursor: pointer;
+}
+
+/* 모달 오버레이 및 창 스타일 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+.modal-content {
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 통독 계획 탭 */
+.plan-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 8px;
+}
+
+.plan-tab {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  font-size: 0.88rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.plan-tab.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.plan-card {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: var(--bg-color);
+  margin-bottom: 10px;
+}
+
+.plan-card-title {
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-plan-go {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* 설정 아이템 스타일 */
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-label {
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+.theme-options, .font-controls-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.theme-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.theme-btn.active {
+  border-color: #e67e22;
+  background-color: #fff8eb;
+  color: #d35400;
+}
+
+body.theme-dark .theme-btn.active {
+  background-color: #3d2c10;
+  color: #f39c12;
+}
+
+.btn-setting-font {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.font-ratio-display {
+  font-weight: bold;
+  font-size: 1rem;
+  min-width: 45px;
+  text-align: center;
 }
 
 /* 메인 성경 본문 뷰어 */

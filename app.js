@@ -147,43 +147,106 @@ function init() {
   if (btnTTSSpeed) btnTTSSpeed.addEventListener("click", toggleTTSSpeed);
   if (btnTTSRepeat) btnTTSRepeat.addEventListener("click", toggleRepeatMode);
 
-  // 글자 크기 및 밝게/어둡게 테마 컨트롤
-  const btnFontDec = document.getElementById("btnFontDec");
-  const btnFontInc = document.getElementById("btnFontInc");
-  const btnThemeToggle = document.getElementById("btnThemeToggle");
+  // 모달 제어 요소
+  const btnOpenSettings = document.getElementById("btnOpenSettings");
+  const btnCloseSettings = document.getElementById("btnCloseSettings");
+  const settingsModal = document.getElementById("settingsModal");
+  const btnThemeSepia = document.getElementById("btnThemeSepia");
+  const btnThemeDark = document.getElementById("btnThemeDark");
+  const btnModalFontDec = document.getElementById("btnModalFontDec");
+  const btnModalFontInc = document.getElementById("btnModalFontInc");
+  const fontRatioLabel = document.getElementById("fontRatioLabel");
 
+  const btnOpenPlan = document.getElementById("btnOpenPlan");
+  const btnClosePlan = document.getElementById("btnClosePlan");
+  const planModal = document.getElementById("planModal");
+
+  // 설정 모달 열기 / 닫기
+  if (btnOpenSettings) {
+    btnOpenSettings.addEventListener("click", () => settingsModal.classList.remove("hidden"));
+  }
+  if (btnCloseSettings) {
+    btnCloseSettings.addEventListener("click", () => settingsModal.classList.add("hidden"));
+  }
+
+  // 글자 크기 조절
   let currentFontSize = 1.1; // 기본 rem
-  if (btnFontDec) {
-    btnFontDec.addEventListener("click", () => {
+  const updateFontDisplay = () => {
+    document.documentElement.style.setProperty("--verse-font-size", `${currentFontSize.toFixed(2)}rem`);
+    if (fontRatioLabel) fontRatioLabel.textContent = `${currentFontSize.toFixed(1)}x`;
+  };
+
+  if (btnModalFontDec) {
+    btnModalFontDec.addEventListener("click", () => {
       if (currentFontSize > 0.85) {
         currentFontSize -= 0.1;
-        document.documentElement.style.setProperty("--verse-font-size", `${currentFontSize.toFixed(2)}rem`);
+        updateFontDisplay();
       }
     });
   }
 
-  if (btnFontInc) {
-    btnFontInc.addEventListener("click", () => {
+  if (btnModalFontInc) {
+    btnModalFontInc.addEventListener("click", () => {
       if (currentFontSize < 1.8) {
         currentFontSize += 0.1;
-        document.documentElement.style.setProperty("--verse-font-size", `${currentFontSize.toFixed(2)}rem`);
+        updateFontDisplay();
       }
     });
   }
 
-  let isDarkTheme = false;
-  if (btnThemeToggle) {
-    btnThemeToggle.addEventListener("click", () => {
-      isDarkTheme = !isDarkTheme;
-      if (isDarkTheme) {
-        document.body.classList.remove("theme-sepia");
-        document.body.classList.add("theme-dark");
-        btnThemeToggle.textContent = "🌙";
-      } else {
-        document.body.classList.remove("theme-dark");
-        document.body.classList.add("theme-sepia");
-        btnThemeToggle.textContent = "☀️";
-      }
+  // 맑게 / 어둡게 테마
+  if (btnThemeSepia) {
+    btnThemeSepia.addEventListener("click", () => {
+      document.body.classList.remove("theme-dark");
+      document.body.classList.add("theme-sepia");
+      btnThemeSepia.classList.add("active");
+      if (btnThemeDark) btnThemeDark.classList.remove("active");
+    });
+  }
+
+  if (btnThemeDark) {
+    btnThemeDark.addEventListener("click", () => {
+      document.body.classList.remove("theme-sepia");
+      document.body.classList.add("theme-dark");
+      btnThemeDark.classList.add("active");
+      if (btnThemeSepia) btnThemeSepia.classList.remove("active");
+    });
+  }
+
+  // 통독 계획 모달 열기 / 닫기 및 탭 처리
+  if (btnOpenPlan) {
+    btnOpenPlan.addEventListener("click", () => {
+      planModal.classList.remove("hidden");
+      renderPlanTab("MCHEYNE");
+    });
+  }
+  if (btnClosePlan) {
+    btnClosePlan.addEventListener("click", () => planModal.classList.add("hidden"));
+  }
+
+  const tabMcheyne = document.getElementById("tabMcheyne");
+  const tabYearOne = document.getElementById("tabYearOne");
+  const tabCustom = document.getElementById("tabCustom");
+
+  if (tabMcheyne) {
+    tabMcheyne.addEventListener("click", () => {
+      [tabMcheyne, tabYearOne, tabCustom].forEach(t => t && t.classList.remove("active"));
+      tabMcheyne.classList.add("active");
+      renderPlanTab("MCHEYNE");
+    });
+  }
+  if (tabYearOne) {
+    tabYearOne.addEventListener("click", () => {
+      [tabMcheyne, tabYearOne, tabCustom].forEach(t => t && t.classList.remove("active"));
+      tabYearOne.classList.add("active");
+      renderPlanTab("YEAR_ONE");
+    });
+  }
+  if (tabCustom) {
+    tabCustom.addEventListener("click", () => {
+      [tabMcheyne, tabYearOne, tabCustom].forEach(t => t && t.classList.remove("active"));
+      tabCustom.classList.add("active");
+      renderPlanTab("CUSTOM");
     });
   }
 
@@ -208,6 +271,88 @@ function updateChapterSelect() {
     quickChapterSelect.appendChild(opt);
   }
   quickChapterSelect.value = state.chapter;
+}
+
+// 통독 계획 탭 콘텐츠 렌더링 (맥체인, 1년 1독, 개인 설정)
+function renderPlanTab(type) {
+  const container = document.getElementById("planTabContent");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (type === "MCHEYNE") {
+    const today = new Date();
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+
+    const mcheynePlans = [
+      { title: "오늘의 맥체인 통독 (155일차 / 예시)", items: [
+        { book: "창세기", ch: 1 },
+        { book: "마태복음", ch: 1 },
+        { book: "에스더", ch: 1 },
+        { book: "사도행전", ch: 1 }
+      ]},
+      { title: "내일의 맥체인 통독 (156일차)", items: [
+        { book: "창세기", ch: 2 },
+        { book: "마태복음", ch: 2 },
+        { book: "에스더", ch: 2 },
+        { book: "사도행전", ch: 2 }
+      ]}
+    ];
+
+    mcheynePlans.forEach(plan => {
+      const card = document.createElement("div");
+      card.className = "plan-card";
+      let html = `<div class="plan-card-title"><span>${plan.title}</span></div><div class="plan-card-items" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;">`;
+      plan.items.forEach(item => {
+        html += `<button class="btn-plan-go" onclick="navigateFromPlan('${item.book}', ${item.ch})">${item.book} ${item.ch}장 📖</button>`;
+      });
+      html += `</div>`;
+      card.innerHTML = html;
+      container.appendChild(card);
+    });
+  } else if (type === "YEAR_ONE") {
+    const card = document.createElement("div");
+    card.className = "plan-card";
+    card.innerHTML = `
+      <div class="plan-card-title"><span>📖 1년 1독 추천 가이드</span></div>
+      <p style="font-size:0.9rem; line-height:1.5; color:var(--text-color); margin-top:6px;">
+        매일 구약 3장, 신약 1장씩 읽으시면 1년 안에 성경 66권을 완독하실 수 있습니다.
+      </p>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="btn-plan-go" onclick="navigateFromPlan('창세기', 1)">오늘의 구약 (창 1~3장)</button>
+        <button class="btn-plan-go" onclick="navigateFromPlan('마태복음', 1)">오늘의 신약 (마 1장)</button>
+      </div>
+    `;
+    container.appendChild(card);
+  } else if (type === "CUSTOM") {
+    const card = document.createElement("div");
+    card.className = "plan-card";
+    card.innerHTML = `
+      <div class="plan-card-title"><span>✏️ 개인 맞춤 통독 목표</span></div>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+        <label style="font-size:0.9rem; font-weight:bold;">목표 기간:
+          <select id="customGoalDays" style="padding:4px; margin-left:6px; border-radius:4px;">
+            <option value="90">90일 집중 통독</option>
+            <option value="180">180일 반년 통독</option>
+            <option value="365" selected>365일 1년 통독</option>
+          </select>
+        </label>
+        <button class="btn-plan-go" style="align-self:flex-start;" onclick="alert('개인 통독 목표가 저장되었습니다!')">목표 설정 및 시작하기</button>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+function navigateFromPlan(book, chapter) {
+  stopTTS();
+  state.book = book;
+  state.chapter = chapter;
+  state.selectedVerse = 1;
+  updateChapterSelect();
+  renderBible();
+  const planModal = document.getElementById("planModal");
+  if (planModal) planModal.classList.add("hidden");
 }
 
 // 동적 역본 파일 로더
