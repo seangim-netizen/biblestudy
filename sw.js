@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-app-cache-v1400';
+const CACHE_NAME = 'bible-app-cache-v1500';
 
 // 서비스 워커 설치 시 즉시 활성화
 self.addEventListener('install', (event) => {

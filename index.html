@@ -4,35 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>개인용 성경앱</title>
-  <link rel="stylesheet" href="style.css?v=1400">
+  <link rel="stylesheet" href="style.css?v=1500">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body class="theme-sepia">
 
-  <!-- 앱 헤더 -->
+  <!-- 간단해진 앱 헤더 (읽음표시 제외, 뷰어 위주) -->
   <header class="app-header">
     <div class="header-row">
       <div class="header-logo-area">
-        <img src="header_logo.png?v=1400" alt="로그인처치" class="header-logo-img">
+        <img src="header_logo.png?v=1500" alt="로그인처치" class="header-logo-img">
       </div>
       <div class="quick-nav-dropdowns">
         <select id="quickBookSelect" class="quick-select"></select>
         <select id="quickChapterSelect" class="quick-select"></select>
       </div>
       <div class="header-actions">
-        <button id="btnToggleReadStatus" class="btn-read-badge" title="읽음 표시">✓ 읽음</button>
+        <button id="btnOpenBoardTab" class="btn-header-plan" title="성경 66권 통독표">📊 통독표</button>
         <button id="btnAudioTTSPlay" class="btn-header-player">▶ 재생</button>
         <button id="btnOpenSettings" class="btn-header-icon" title="설정">⚙️</button>
       </div>
     </div>
   </header>
 
-  <!-- 메인 레이아웃: 성경 본문 뷰어 -->
+  <!-- 메인 레이아웃: 성경 본문 뷰어 및 하부 읽음 버튼 -->
   <main class="app-content">
     <div id="bibleViewer" class="bible-viewer-container"></div>
+    
+    <!-- 각 장마다 하단(본문 끝)에 배치되는 읽음 체크 버튼 -->
+    <div class="chapter-footer-read-area">
+      <button id="btnBottomToggleRead" class="btn-chapter-bottom-read">
+        <span class="read-icon">✓</span> <span id="bottomReadText">이 장 읽음 완료 표시</span>
+      </button>
+    </div>
   </main>
+
+  <!-- 66권 성경 통독표 전용 페이지 탭 (전체 화면 메인 탭 뷰) -->
+  <div id="boardPageTab" class="page-tab-overlay hidden">
+    <div class="page-tab-container">
+      <div class="page-tab-header">
+        <div class="page-tab-title">
+          <h2>📊 성경 66권 통독 현황표</h2>
+          <p id="boardTabSubtitle">전체 1,189장 중 0장 (0.0%) 완독</p>
+        </div>
+        <button id="btnCloseBoardTab" class="btn-close-page-tab">✕ 닫기</button>
+      </div>
+      <div class="page-tab-progress-wrap">
+        <div class="progress-bar-bg">
+          <div id="boardProgressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+      <div class="page-tab-body">
+        <div id="boardGridContainer" class="board-grid-container">
+          <!-- 66권 전체 그리드 방 동적 렌더링 -->
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- 하단 음성 플레이어 컨트롤 박스 (재생 시 자동 표시) -->
   <div id="ttsPlayerBox" class="tts-player-box hidden">
@@ -48,87 +78,32 @@
     </div>
   </div>
 
-  <!-- 통독 계획 모달 -->
-  <div id="planModal" class="modal-overlay hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>📅 성경 통독 계획</h3>
-        <button id="btnClosePlan" class="btn-close-modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="plan-tabs">
-          <button id="tabMcheyne" class="plan-tab active">맥체인 통독</button>
-          <button id="tabYearOne" class="plan-tab">1년 1독</button>
-          <button id="tabCustom" class="plan-tab">개인 설정</button>
-        </div>
-        <div id="planTabContent" class="plan-tab-content">
-          <!-- 탭 콘텐츠 동적 생성 -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 통합 설정 & 통독 현황표 모달 -->
+  <!-- 설정 모달 (화면 모드 및 폰트 크기) -->
   <div id="settingsModal" class="modal-overlay hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>⚙️ 설정 & 성경 통독표</h3>
+        <h3>⚙️ 화면 및 폰트 설정</h3>
         <button id="btnCloseSettings" class="btn-close-modal">✕</button>
       </div>
       <div class="modal-body">
-        
-        <!-- 1. 통독 현황 요약 대시보드 -->
-        <div class="setting-section">
-          <div class="setting-section-title">📊 나의 통독 현황</div>
-          <div class="progress-dashboard">
-            <div class="progress-summary">
-              <span>전체 1,189장 중 <strong id="completedChaptersCount">0</strong>장 읽음</span>
-              <span id="progressPercentage" class="progress-percentage">0.0%</span>
-            </div>
-            <div class="progress-bar-bg">
-              <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
-            </div>
+        <div class="setting-item">
+          <label class="setting-label">화면 테마 모드</label>
+          <div class="theme-options">
+            <button id="btnThemeSepia" class="theme-btn active">☀️ 맑게 (세피아)</button>
+            <button id="btnThemeDark" class="theme-btn">🌙 어둡게 (다크)</button>
           </div>
         </div>
-
-        <!-- 2. 통독 계획 탭 (맥체인, 1년1독, 성경통독표 체크) -->
-        <div class="setting-section">
-          <div class="setting-section-title">📅 통독 플랜 & 66권 통독표</div>
-          <div class="plan-tabs">
-            <button id="tabBoard" class="plan-tab active">66권 통독표</button>
-            <button id="tabMcheyne" class="plan-tab">맥체인 통독</button>
-            <button id="tabYearOne" class="plan-tab">1년 1독</button>
-          </div>
-          <div id="planTabContent" class="plan-tab-content">
-            <!-- 동적 렌더링 -->
+        <div class="setting-item" style="margin-top:10px;">
+          <label class="setting-label">글자 크기 조절</label>
+          <div class="font-controls-row">
+            <button id="btnModalFontDec" class="btn-setting-font">가- (작게)</button>
+            <span id="fontRatioLabel" class="font-ratio-display">1.1x</span>
+            <button id="btnModalFontInc" class="btn-setting-font">가+ (크게)</button>
           </div>
         </div>
-
-        <!-- 3. 화면 테마 & 글자 크기 -->
-        <div class="setting-section">
-          <div class="setting-section-title">🎨 화면 및 폰트 설정</div>
-          <div class="setting-item">
-            <label class="setting-label">화면 테마 모드</label>
-            <div class="theme-options">
-              <button id="btnThemeSepia" class="theme-btn active">☀️ 맑게 (세피아)</button>
-              <button id="btnThemeDark" class="theme-btn">🌙 어둡게 (다크)</button>
-            </div>
-          </div>
-          <div class="setting-item" style="margin-top:10px;">
-            <label class="setting-label">글자 크기 조절</label>
-            <div class="font-controls-row">
-              <button id="btnModalFontDec" class="btn-setting-font">가- (작게)</button>
-              <span id="fontRatioLabel" class="font-ratio-display">1.1x</span>
-              <button id="btnModalFontInc" class="btn-setting-font">가+ (크게)</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. 통독 기록 초기화 -->
-        <div class="setting-section" style="border-bottom:none;">
+        <div class="setting-section" style="margin-top:15px; border-bottom:none;">
           <button id="btnResetHistory" class="btn-reset-danger">🗑️ 통독 기록 초기화</button>
         </div>
-
       </div>
     </div>
   </div>
@@ -169,7 +144,7 @@
 
   <!-- 서비스 워커 및 DB 스크립트 -->
   <script src="bible_db_66.js"></script>
-  <script src="app.js?v=1400"></script>
+  <script src="app.js?v=1500"></script>
 
   <!-- 백그라운드 재생 및 잠금화면 유지용 무음 MP3 오디오 (iOS 최적화) -->
   <audio id="bgSilentAudio" loop preload="auto" src="data:audio/mpeg;base64,SUQ3BAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//5DAAAAAAAAAAAAAFhpbmcAAAAPAAAAUAAADnAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw//5MYxAEAEAAAAUAAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxAYACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxBwACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"></audio>
