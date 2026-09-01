@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>개인용 성경앱</title>
-  <link rel="stylesheet" href="style.css?v=1800">
+  <link rel="stylesheet" href="style.css?v=1900">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -44,7 +44,7 @@
   <div id="ttsPlayerBox" class="tts-player-box hidden">
     <div class="tts-player-row1">
       <button id="btnAudioTTSPrev" class="tts-ctrl-btn">⏮ 이전</button>
-      <button id="btnAudioTTSPlay2" class="tts-ctrl-btn tts-play-btn">❚❚ 일시정지</button>
+      <button id="btnAudioTTSPlay2" class="tts-ctrl-btn tts-play-btn">❚❚</button>
       <button id="btnAudioTTSNext" class="tts-ctrl-btn">다음 ⏭</button>
     </div>
     <div class="tts-player-row2">
@@ -164,7 +164,7 @@
 
   <!-- 서비스 워커 및 DB 스크립트 -->
   <script src="bible_db_66.js"></script>
-  <script src="app.js?v=1800"></script>
+  <script src="app.js?v=1900"></script>
 
   <!-- 백그라운드 재생 및 잠금화면 유지용 무음 MP3 오디오 (iOS 최적화) -->
   <audio id="bgSilentAudio" loop preload="auto" src="data:audio/mpeg;base64,SUQ3BAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//5DAAAAAAAAAAAAAFhpbmcAAAAPAAAAUAAADnAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw//5MYxAEAEAAAAUAAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxAYACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//5MYxBwACAAABQBkAAANVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"></audio>

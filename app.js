@@ -898,9 +898,9 @@ function stopTTS() {
 }
 
 function updateTTSPlayButtons(isPlaying) {
-  const text = isPlaying ? "❚❚ 일시정지" : "▶ 재생";
-  if (btnAudioTTSPlay) btnAudioTTSPlay.textContent = text;
-  if (btnAudioTTSPlay2) btnAudioTTSPlay2.textContent = text;
+  const icon = isPlaying ? "❚❚" : "▶";
+  if (btnAudioTTSPlay) btnAudioTTSPlay.textContent = icon;
+  if (btnAudioTTSPlay2) btnAudioTTSPlay2.textContent = icon;
 
   const bgAudio = document.getElementById('bgSilentAudio');
   if (isPlaying && !isTTSPaused) {
