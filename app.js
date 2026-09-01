@@ -24,6 +24,18 @@ const BIBLE_BOOKS = [
   { name: "요한3서", chapters: 1 }, { name: "유다서", chapters: 1 }, { name: "요한계시록", chapters: 22 }
 ];
 
+// 역본 정보 설정
+const TRANSLATIONS = {
+  KG: { name: "개역개정", varName: "BIBLE_66_DB_KG", path: null },
+  SB: { name: "새번역", varName: "BIBLE_66_DB_SB", path: null },
+  EASY: { name: "쉬운성경", varName: "BIBLE_DB_EASY", path: "bible_data/bible_db_easy.js" },
+  HYUNDAI: { name: "현대인의 성경", varName: "BIBLE_DB_HYUNDAI", path: "bible_data/bible_db_hyundai.js" },
+  NIV: { name: "NIV (영어)", varName: "BIBLE_DB_NIV", path: "bible_data/bible_db_niv.js" },
+  NLT: { name: "NLT (영어)", varName: "BIBLE_DB_NLT", path: "bible_data/bible_db_nlt.js" },
+  NKJV: { name: "NKJV (영어)", varName: "BIBLE_DB_NKJV", path: "bible_data/bible_db_nkjv.js" },
+  RSV: { name: "RSV (영어)", varName: "BIBLE_DB_RSV", path: "bible_data/bible_db_rsv.js" }
+};
+
 // 현재 상태
 let state = {
   book: "창세기",
@@ -107,6 +119,28 @@ function updateChapterSelect() {
   quickChapterSelect.value = state.chapter;
 }
 
+// 동적 역본 파일 로더
+function ensureTranslationLoaded(tCode, callback) {
+  const tInfo = TRANSLATIONS[tCode];
+  if (!tInfo) return callback(false);
+
+  // 이미 메모리에 로드되어 있으면 바로 실행
+  if (window[tInfo.varName]) {
+    return callback(true);
+  }
+
+  // 외부 파일 로드 (쉬운성경, 현대인, NIV, NLT, NKJV, RSV 등)
+  if (tInfo.path) {
+    const script = document.createElement("script");
+    script.src = tInfo.path;
+    script.onload = () => callback(true);
+    script.onerror = () => callback(false);
+    document.body.appendChild(script);
+  } else {
+    callback(false);
+  }
+}
+
 function renderBible() {
   bibleViewerEl.innerHTML = "";
 
@@ -116,28 +150,30 @@ function renderBible() {
   title.textContent = `${state.book} ${state.chapter}${unit}`;
   bibleViewerEl.appendChild(title);
 
-  // 성경 DB 선택 (BIBLE_66_DB_KG 또는 BIBLE_66_DB_SB)
-  const dbName = state.translation === "SB" ? "BIBLE_66_DB_SB" : "BIBLE_66_DB_KG";
-  const db = window[dbName];
+  ensureTranslationLoaded(state.translation, (success) => {
+    const tInfo = TRANSLATIONS[state.translation] || TRANSLATIONS.KG;
+    const db = window[tInfo.varName];
 
-  if (!db || !db[state.book] || !db[state.book][String(state.chapter)]) {
-    const err = document.createElement("div");
-    err.style.color = "red";
-    err.style.textAlign = "center";
-    err.textContent = "본문 데이터를 로드할 수 없습니다.";
-    bibleViewerEl.appendChild(err);
-    return;
-  }
+    if (!success || !db || !db[state.book] || !db[state.book][String(state.chapter)]) {
+      const err = document.createElement("div");
+      err.style.color = "red";
+      err.style.textAlign = "center";
+      err.style.padding = "20px";
+      err.textContent = `[${tInfo.name}] 데이터를 불러올 수 없거나 로드 중입니다.`;
+      bibleViewerEl.appendChild(err);
+      return;
+    }
 
-  const verses = db[state.book][String(state.chapter)];
-  verses.forEach((verseText, idx) => {
-    const card = document.createElement("div");
-    card.className = "verse-card";
-    card.innerHTML = `<span class="verse-num">${idx + 1}</span> ${verseText}`;
-    bibleViewerEl.appendChild(card);
+    const verses = db[state.book][String(state.chapter)];
+    verses.forEach((verseText, idx) => {
+      const card = document.createElement("div");
+      card.className = "verse-card";
+      card.innerHTML = `<span class="verse-num">${idx + 1}</span> ${verseText}`;
+      bibleViewerEl.appendChild(card);
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 if (document.readyState === "complete" || document.readyState === "interactive") {
