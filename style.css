@@ -118,6 +118,13 @@ body.theme-sepia {
   margin-bottom: 10px;
   font-size: var(--verse-font-size);
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.verse-card.is-reading {
+  background-color: #fff3cd !important;
+  border-color: #ffeeba !important;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
 }
 
 .verse-num {
