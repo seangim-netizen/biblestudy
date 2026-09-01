@@ -180,11 +180,31 @@ function init() {
   if (btnOpenSettings) {
     btnOpenSettings.addEventListener("click", () => {
       settingsModal.classList.remove("hidden");
+      renderSettingsBoardGrid();
     });
   }
   if (btnCloseSettings) {
     btnCloseSettings.addEventListener("click", () => {
       settingsModal.classList.add("hidden");
+    });
+  }
+
+  // 설정 모달 내 66권 읽은 장 격자표 아코디언 토글
+  const btnToggleBoardGrid = document.getElementById("btnToggleBoardGrid");
+  const boardGridWrapper = document.getElementById("boardGridWrapper");
+  const boardAccordionArrow = document.getElementById("boardAccordionArrow");
+
+  if (btnToggleBoardGrid && boardGridWrapper) {
+    btnToggleBoardGrid.addEventListener("click", () => {
+      const isHidden = boardGridWrapper.classList.contains("hidden");
+      if (isHidden) {
+        boardGridWrapper.classList.remove("hidden");
+        if (boardAccordionArrow) boardAccordionArrow.textContent = "▲";
+        renderSettingsBoardGrid();
+      } else {
+        boardGridWrapper.classList.add("hidden");
+        if (boardAccordionArrow) boardAccordionArrow.textContent = "▼";
+      }
     });
   }
 
@@ -328,9 +348,9 @@ function updateReadBadgeState() {
   }
 }
 
-// 66권 전체 성경 통독표 전용 메인 페이지 탭 렌더링
-function renderFullBoardPageTab() {
-  const container = document.getElementById("boardGridContainer");
+// 설정 모달 내 66권 성경 장별 음성/읽음 음색 식별 격자표 렌더링
+function renderSettingsBoardGrid() {
+  const container = document.getElementById("settingsBoardGrid");
   if (!container) return;
   container.innerHTML = "";
 
@@ -343,31 +363,25 @@ function renderFullBoardPageTab() {
 
     const readList = readHistory[book.name] || [];
     readCountTotal += readList.length;
-
     const unit = book.name === "시편" ? "편" : "장";
 
     const title = document.createElement("div");
-    title.className = "progress-book-name";
-    title.textContent = `${book.name} (${readList.length} / ${book.chapters}${unit})`;
+    title.className = "grid-book-name";
+    title.textContent = `${book.name} (${readList.length}/${book.chapters}${unit})`;
 
     const flex = document.createElement("div");
-    flex.className = "progress-chapters-flex";
+    flex.className = "grid-dots-row";
 
     for (let i = 1; i <= book.chapters; i++) {
       const dot = document.createElement("div");
       const isRead = readList.includes(i);
-      dot.className = `progress-chapter-dot ${isRead ? 'checked' : ''}`;
+      dot.className = `grid-dot ${isRead ? 'checked' : ''}`;
       dot.textContent = `${i}`;
+      dot.title = `${book.name} ${i}${unit} ${isRead ? '(읽음 완료)' : '(미독)'}`;
 
       dot.addEventListener("click", () => {
-        // 클릭 시 해당 성경 장으로 바로 이동하거나 방 체크 선택
-        state.book = book.name;
-        state.chapter = i;
-        state.selectedVerse = 1;
-        updateChapterSelect();
-        renderBible();
-        const boardTab = document.getElementById("boardPageTab");
-        if (boardTab) boardTab.classList.add("hidden");
+        toggleChapterRead(book.name, i);
+        renderSettingsBoardGrid();
       });
 
       flex.appendChild(dot);
@@ -378,11 +392,13 @@ function renderFullBoardPageTab() {
     container.appendChild(bookRow);
   });
 
-  const subtitleEl = document.getElementById("boardTabSubtitle");
-  const barEl = document.getElementById("boardProgressBarFill");
+  const countEl = document.getElementById("completedChaptersCount");
+  const pctEl = document.getElementById("progressPercentage");
+  const barEl = document.getElementById("progressBarFill");
 
+  if (countEl) countEl.textContent = readCountTotal;
   const ratio = ((readCountTotal / totalChapters) * 100).toFixed(1);
-  if (subtitleEl) subtitleEl.textContent = `전체 1,189장 중 ${readCountTotal}장 (${ratio}%) 완독`;
+  if (pctEl) pctEl.textContent = `${ratio}%`;
   if (barEl) barEl.style.width = `${ratio}%`;
 }
 

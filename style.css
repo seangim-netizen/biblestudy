@@ -652,48 +652,157 @@ body.theme-dark .verse-card.is-reading {
   border-color: #c0392b;
 }
 
-body:has(.tts-player-box:not(.hidden)) .app-content {
-  margin-bottom: calc(var(--nav-height) + 80px);
+.btn-header-player-icon {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(39, 174, 96, 0.3);
 }
 
-/* 하단 네비게이션 */
+/* 설정 창 내 성경 66권 아코디언 격자표 */
+.btn-toggle-board {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 1px dashed var(--primary-color);
+  border-radius: 8px;
+  background-color: var(--card-bg);
+  color: var(--primary-color);
+  font-weight: bold;
+  font-size: 0.92rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-toggle-board:hover {
+  background-color: var(--bg-color);
+}
+
+.board-grid-wrapper {
+  margin-top: 12px;
+  transition: all 0.3s ease;
+}
+
+.board-grid-wrapper.hidden {
+  display: none !important;
+}
+
+.settings-board-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.grid-book-name {
+  font-size: 0.88rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: var(--primary-color);
+}
+
+.grid-dots-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.grid-dot {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 읽은 장은 음영으로 식별 */
+.grid-dot.checked {
+  background-color: var(--accent-color) !important;
+  color: white !important;
+  border-color: #219653 !important;
+  font-weight: bold;
+  box-shadow: inset 0 0 4px rgba(0,0,0,0.2);
+}
+
+body.theme-dark .grid-dot.checked {
+  background-color: #27ae60 !important;
+  color: #ffffff !important;
+}
+
+/* 메인 성경 본문 뷰어 하단 여백 및 아이폰 하단 바 간격 보장 */
+.app-content {
+  margin-top: var(--header-height);
+  margin-bottom: calc(var(--nav-height) + 24px + env(safe-area-inset-bottom, 10px));
+  padding: 16px;
+  flex: 1;
+}
+
+body:has(.tts-player-box:not(.hidden)) .app-content {
+  margin-bottom: calc(var(--nav-height) + 104px + env(safe-area-inset-bottom, 10px));
+}
+
+/* 하단 네비게이션바 - 아이폰 세이프 에어리어 반영 및 한 단계 위로 올림 */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--nav-height);
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom, 10px));
+  padding-bottom: env(safe-area-inset-bottom, 10px);
   background-color: var(--header-bg);
   border-top: 1px solid var(--header-border);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
-  padding: 0 8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
 }
 
 .nav-control-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   max-width: 500px;
 }
 
 /* 칸 크기에 맞춘 이전/다음 화살표 버튼 */
 .btn-arrow-nav {
-  padding: 8px 12px;
+  padding: 8px 14px;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 8px;
   background-color: var(--card-bg);
   color: var(--text-color);
   font-weight: bold;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 42px;
+  min-width: 46px;
 }
 
 .select-wrapper {
@@ -703,10 +812,10 @@ body:has(.tts-player-box:not(.hidden)) .app-content {
 .select-wrapper select {
   width: 100%;
   padding: 8px 4px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #ccc;
   background-color: var(--card-bg);
   color: var(--text-color);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: bold;
 }
