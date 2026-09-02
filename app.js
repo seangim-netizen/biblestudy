@@ -880,6 +880,47 @@ function speakNextTTS() {
     }
   };
 
+  if ('mediaSession' in navigator) {
+    try {
+      const unit = state.book === "시편" ? "편" : "장";
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `${state.book} ${state.chapter}${unit} ${item.verse}절`,
+        artist: `성경 낭독 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
+        album: "성경 통독",
+        artwork: [
+          { src: 'app_logo.png', sizes: '512x512', type: 'image/png' },
+          { src: 'header_logo.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', function() {
+        const bgAudio = document.getElementById('bgSilentAudio');
+        if (bgAudio) {
+          try { bgAudio.play().catch(function(e){}); } catch(e) {}
+        }
+        if ('speechSynthesis' in window) {
+          if (window.speechSynthesis.paused) {
+            try { window.speechSynthesis.resume(); } catch(e) {}
+            isTTSSpeaking = true;
+            isTTSPaused = false;
+            updateTTSPlayButtons(true);
+          } else if (!isTTSSpeaking) {
+            togglePlayTTS();
+          }
+        }
+      });
+      navigator.mediaSession.setActionHandler('pause', function() {
+        pauseTTS();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', function() {
+        playPrevTTS();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', function() {
+        playNextTTS();
+      });
+    } catch(e) {}
+  }
+
   window.speechSynthesis.speak(utterance);
 
   // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개
