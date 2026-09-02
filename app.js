@@ -1185,23 +1185,12 @@ document.addEventListener('visibilitychange', function() {
   }
 })();
 
-// 3. 화면으로 복귀 시 UI 및 TTS 낭독 상태 동기화
+// 3. 화면으로 복귀 시 UI 및 TTS 낭독 상태 동기화 (백그라운드 재생 상태 보존)
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') {
     if ('speechSynthesis' in window) {
-      if (window.speechSynthesis.speaking) {
-        if (window.speechSynthesis.paused) {
-          isTTSSpeaking = false;
-          isTTSPaused = true;
-        } else {
-          isTTSSpeaking = true;
-          isTTSPaused = false;
-        }
-      } else {
-        if (!isTTSPaused) {
-          isTTSSpeaking = false;
-          isTTSPaused = false;
-        }
+      if (window.speechSynthesis.paused && isTTSSpeaking) {
+        try { window.speechSynthesis.resume(); } catch(e) {}
       }
     }
     updateTTSPlayButtons(isTTSSpeaking && !isTTSPaused);
