@@ -855,11 +855,11 @@ function speakNextTTS() {
   utterance.lang = (state.translation.startsWith("NI") || state.translation.startsWith("NL") || state.translation.startsWith("NK") || state.translation.startsWith("RS")) ? "en-US" : "ko-KR";
   utterance.rate = ttsRate;
 
+  let hasStepEnded = false;
+
   utterance.onend = () => {
-    if (ttsKeepAliveTimer) {
-      clearInterval(ttsKeepAliveTimer);
-      ttsKeepAliveTimer = null;
-    }
+    if (hasStepEnded) return;
+    hasStepEnded = true;
     if (isTTSSpeaking && !isTTSPaused) {
       if (repeatMode === 'VERSE') {
         speakNextTTS();
@@ -872,10 +872,8 @@ function speakNextTTS() {
 
   utterance.onerror = (e) => {
     console.error("TTS Error:", e);
-    if (ttsKeepAliveTimer) {
-      clearInterval(ttsKeepAliveTimer);
-      ttsKeepAliveTimer = null;
-    }
+    if (hasStepEnded) return;
+    hasStepEnded = true;
     if (isTTSSpeaking && !isTTSPaused) {
       currentTTSIndex++;
       speakNextTTS();
