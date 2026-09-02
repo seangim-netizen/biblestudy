@@ -707,13 +707,13 @@ function renderVerseCards(pVerses, sVerses) {
   highlightVerse(state.selectedVerse);
 }
 
-// 구절 클릭/터치 시 동작 (재생 중이 아닐 때는 절대 재생이 시작되지 않고 순수 노란색 하이라이트만 작동)
+// 구절 클릭/터치 시 동작
 function onVerseClick(verseNum) {
   state.selectedVerse = verseNum;
   highlightVerse(verseNum);
 
-  // 음성 낭독이 '실제로 진행 중'일 때만 터치한 구절부터 연결하여 낭독
-  if (isTTSSpeaking && !isTTSPaused) {
+  // 음성 낭독 모드(isTTSSpeaking)가 켜져 있으면, 터치한 구절부터 즉시 이어서 낭독
+  if (isTTSSpeaking) {
     playFromVerse(verseNum);
   }
 }
@@ -752,13 +752,13 @@ function togglePlayTTS() {
       window.speechSynthesis.resume();
       isTTSPaused = false;
       updateTTSPlayButtons(true);
+      if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
     } else {
-      window.speechSynthesis.pause();
-      isTTSPaused = true;
-      updateTTSPlayButtons(false);
+      // 낭독 중일 때 상단 ▶ 심볼 버튼을 다시 누르거나 멈추면 정지하고 박스 닫기
+      stopTTS();
     }
   } else {
-    // 터치하거나 선택해둔 절부터 재생 시작
+    // 터치하거나 선택해둔 절부터 바로 재생 시작 및 플레이어 박스 열기
     playFromVerse(state.selectedVerse || 1);
   }
 }
