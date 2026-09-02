@@ -890,24 +890,16 @@ function speakNextTTS() {
     bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
   }
 
-  // iOS 백그라운드에서 SpeechSynthesis 엔진 멈춤을 방지하는 300ms 간격 킵어라이브 Watchdog
-  ttsKeepAliveTimer = setInterval(() => {
-    if (isTTSSpeaking && !isTTSPaused) {
-      if (bgAudio && bgAudio.paused) {
-        bgAudio.play().catch(e => {});
-      }
-      try {
+  // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback (개인 통독앱과 동일한 3초 인터벌)
+  if (!window.ttsHeartbeatInterval) {
+    window.ttsHeartbeatInterval = setInterval(function() {
+      if (isTTSSpeaking && 'speechSynthesis' in window) {
         if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        } else if (!window.speechSynthesis.speaking) {
-          window.speechSynthesis.resume();
+          try { window.speechSynthesis.resume(); } catch(e) {}
         }
-      } catch (e) {}
-    } else {
-      clearInterval(ttsKeepAliveTimer);
-      ttsKeepAliveTimer = null;
-    }
-  }, 300);
+      }
+    }, 3000);
+  }
 }
 
 function playPrevTTS() {
@@ -1096,33 +1088,57 @@ function setupMediaSessionHandlers() {
 
 }
 
-// 앱이 백그라운드로 내려가거나 화면이 꺼질 때 iOS 음성 엔진 복구 및 지속 유지
+// -------------------------------------------------------------
+// 백그라운드 & 화면 켜짐/꺼짐 낭독 지속 유지 (개인 통독앱 검증 메커니즘)
+// -------------------------------------------------------------
+
+// 1. 앱 숨김 또는 타 앱 전환 시 오디오 세션 복구
 document.addEventListener('visibilitychange', function() {
-  const bgAudio = document.getElementById('bgSilentAudio');
-  if (document.hidden) {
-    if (isTTSSpeaking && !isTTSPaused) {
-      if (bgAudio && bgAudio.paused) {
-        bgAudio.play().catch(e => console.log("bgAudio play catch on hidden:", e));
-      }
-      try {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
-      } catch (e) {}
+  if (document.hidden && isTTSSpeaking) {
+    var bgAudio = document.getElementById('bgSilentAudio');
+    if (bgAudio) {
+      try { bgAudio.play().catch(function(e){}); } catch(e) {}
     }
-  } else {
-    if (isTTSSpeaking && !isTTSPaused) {
-      try {
+    if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+      try { window.speechSynthesis.resume(); } catch(e) {}
+    }
+  }
+});
+
+// 2. 무음 MP3 재생 timeupdate 이벤트를 이용한 강력한 백그라운드 Keep-alive
+(function() {
+  var bgSilentAudioEl = document.getElementById('bgSilentAudio');
+  if (bgSilentAudioEl) {
+    bgSilentAudioEl.addEventListener('timeupdate', function() {
+      if (isTTSSpeaking && 'speechSynthesis' in window) {
         if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
+          try { window.speechSynthesis.resume(); } catch(e) {}
         }
-        if (!window.speechSynthesis.speaking) {
-          speakNextTTS();
+      }
+    });
+  }
+})();
+
+// 3. 화면으로 복귀 시 UI 및 TTS 낭독 상태 동기화
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') {
+    if ('speechSynthesis' in window) {
+      if (window.speechSynthesis.speaking) {
+        if (window.speechSynthesis.paused) {
+          isTTSSpeaking = false;
+          isTTSPaused = true;
+        } else {
+          isTTSSpeaking = true;
+          isTTSPaused = false;
         }
-      } catch (e) {
-        speakNextTTS();
+      } else {
+        if (!isTTSPaused) {
+          isTTSSpeaking = false;
+          isTTSPaused = false;
+        }
       }
     }
+    updateTTSPlayButtons(isTTSSpeaking && !isTTSPaused);
   }
 });
 
