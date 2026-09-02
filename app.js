@@ -272,27 +272,7 @@ function init() {
     });
   }
 
-  // 설정 모달 내 통독 계획 탭 스위칭 (맥체인 / 1년 1독)
-  const tabMcheyne = document.getElementById("tabMcheyne");
-  const tabYearOne = document.getElementById("tabYearOne");
 
-  if (tabMcheyne) {
-    tabMcheyne.addEventListener("click", () => {
-      tabMcheyne.classList.add("active");
-      if (tabYearOne) tabYearOne.classList.remove("active");
-      renderPlanTab("MCHEYNE");
-    });
-  }
-
-  if (tabYearOne) {
-    tabYearOne.addEventListener("click", () => {
-      tabYearOne.classList.add("active");
-      if (tabMcheyne) tabMcheyne.classList.remove("active");
-      renderPlanTab("YEAR_ONE");
-    });
-  }
-
-  renderPlanTab("MCHEYNE");
 
   setupMediaSessionHandlers();
 
