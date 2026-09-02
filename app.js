@@ -890,24 +890,24 @@ function speakNextTTS() {
     bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
   }
 
-  // iOS 백그라운드에서 SpeechSynthesis 엔진 멈춤을 방지하는 1초 간격 킵어라이브 Watchdog
+  // iOS 백그라운드에서 SpeechSynthesis 엔진 멈춤을 방지하는 300ms 간격 킵어라이브 Watchdog
   ttsKeepAliveTimer = setInterval(() => {
     if (isTTSSpeaking && !isTTSPaused) {
       if (bgAudio && bgAudio.paused) {
         bgAudio.play().catch(e => {});
       }
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-      } else if (!window.speechSynthesis.speaking) {
-        clearInterval(ttsKeepAliveTimer);
-        ttsKeepAliveTimer = null;
-        speakNextTTS();
-      }
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        } else if (!window.speechSynthesis.speaking) {
+          window.speechSynthesis.resume();
+        }
+      } catch (e) {}
     } else {
       clearInterval(ttsKeepAliveTimer);
       ttsKeepAliveTimer = null;
     }
-  }, 1000);
+  }, 300);
 }
 
 function playPrevTTS() {
@@ -1094,28 +1094,7 @@ function setupMediaSessionHandlers() {
     });
   }
 
-  // 블루투스 이어폰 탈착 및 사운드 출력 장치 해제 감지 (iOS / Android 공통)
-  const bgAudio = document.getElementById('bgSilentAudio');
-  if (bgAudio) {
-    bgAudio.addEventListener('pause', () => {
-      // 이어폰이 빠지거나 외부 미디어 오디오가 정지 요청되었을 때
-      if (isTTSSpeaking && !isTTSPaused && document.hidden) {
-        // 백그라운드 상태에서 오디오 출력이 멈춘 경우 즉시 일시정지
-        pauseTTS();
-      }
-    });
-  }
 }
-
-// 블루투스 이어폰 제거 감지 (HTML5 Audio / Web Audio Session API 연동)
-window.addEventListener('pagehide', () => {
-  if (isTTSSpeaking && !isTTSPaused) {
-    const bgAudio = document.getElementById('bgSilentAudio');
-    if (bgAudio && bgAudio.paused) {
-      pauseTTS();
-    }
-  }
-});
 
 // 앱이 백그라운드로 내려가거나 화면이 꺼질 때 iOS 음성 엔진 복구 및 지속 유지
 document.addEventListener('visibilitychange', function() {
