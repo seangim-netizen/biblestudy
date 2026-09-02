@@ -962,21 +962,29 @@ function toggleRepeatMode() {
 }
 
 function stopTTS() {
+  isTTSSpeaking = false;
+  isTTSPaused = false;
+
   if (ttsKeepAliveTimer) {
     clearInterval(ttsKeepAliveTimer);
     ttsKeepAliveTimer = null;
   }
-  window.speechSynthesis.cancel();
-  isTTSSpeaking = false;
-  isTTSPaused = false;
+
+  try {
+    window.speechSynthesis.pause();
+    window.speechSynthesis.cancel();
+  } catch (e) {}
+
   currentTTSIndex = 0;
   ttsSpeechItems = [];
+
   updateTTSPlayButtons(false);
   if (ttsPlayerBox) ttsPlayerBox.classList.add("hidden");
 
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
     bgAudio.pause();
+    try { bgAudio.currentTime = 0; } catch (e) {}
   }
 
   if ('mediaSession' in navigator) {
