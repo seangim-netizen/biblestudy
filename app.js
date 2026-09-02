@@ -921,13 +921,15 @@ function speakNextTTS() {
     } catch(e) {}
   }
 
-  window.speechSynthesis.speak(utterance);
-
-  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개
+  // iOS Safari 백그라운드 오디오 세션 획득을 위해 bgAudio.play()를 speechSynthesis.speak 전에 선행 실행
   const bgAudio = document.getElementById('bgSilentAudio');
-  if (bgAudio && bgAudio.paused) {
-    bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
+  if (bgAudio) {
+    try {
+      bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
+    } catch(e) {}
   }
+
+  window.speechSynthesis.speak(utterance);
 
   // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback (개인 통독앱과 동일한 3초 인터벌)
   if (!window.ttsHeartbeatInterval) {
