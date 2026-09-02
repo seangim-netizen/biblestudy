@@ -208,6 +208,46 @@ function init() {
     });
   }
 
+  // 메모 모달 제어 이벤트
+  const btnCloseNote = document.getElementById("btnCloseNote");
+  const btnSaveNote = document.getElementById("btnSaveNote");
+  const btnDeleteNote = document.getElementById("btnDeleteNote");
+  const noteModal = document.getElementById("noteModal");
+  const noteInputText = document.getElementById("noteInputText");
+
+  if (btnCloseNote) {
+    btnCloseNote.addEventListener("click", () => {
+      noteModal.classList.add("hidden");
+    });
+  }
+
+  if (btnSaveNote) {
+    btnSaveNote.addEventListener("click", () => {
+      if (currentEditingNoteKey && noteInputText) {
+        const text = noteInputText.value.trim();
+        if (text) {
+          bibleNotes[currentEditingNoteKey] = text;
+        } else {
+          delete bibleNotes[currentEditingNoteKey];
+        }
+        saveBibleNotes();
+        noteModal.classList.add("hidden");
+        renderBible();
+      }
+    });
+  }
+
+  if (btnDeleteNote) {
+    btnDeleteNote.addEventListener("click", () => {
+      if (currentEditingNoteKey && confirm("작성하신 메모를 삭제하시겠습니까?")) {
+        delete bibleNotes[currentEditingNoteKey];
+        saveBibleNotes();
+        noteModal.classList.add("hidden");
+        renderBible();
+      }
+    });
+  }
+
   // 글자 크기 조절
   const btnModalFontDec = document.getElementById("btnModalFontDec");
   const btnModalFontInc = document.getElementById("btnModalFontInc");
@@ -581,6 +621,45 @@ function renderBible() {
   });
 }
 
+// 메모 데이터 Persistence (localStorage)
+let bibleNotes = JSON.parse(localStorage.getItem("bible_user_notes") || "{}");
+
+function saveBibleNotes() {
+  localStorage.setItem("bible_user_notes", JSON.stringify(bibleNotes));
+}
+
+function getVerseNoteKey(book, chapter, verse) {
+  return `${book}_${chapter}_${verse}`;
+}
+
+let currentEditingNoteKey = null;
+
+function openNoteModal(book, chapter, verse, verseText) {
+  const key = getVerseNoteKey(book, chapter, verse);
+  currentEditingNoteKey = key;
+
+  const noteModal = document.getElementById("noteModal");
+  const noteModalTitle = document.getElementById("noteModalTitle");
+  const noteVersePreview = document.getElementById("noteVersePreview");
+  const noteInputText = document.getElementById("noteInputText");
+  const btnDeleteNote = document.getElementById("btnDeleteNote");
+
+  const unit = book === "시편" ? "편" : "장";
+  if (noteModalTitle) noteModalTitle.textContent = `📝 ${book} ${chapter}${unit} ${verse}절 메모`;
+  if (noteVersePreview) noteVersePreview.textContent = `${verse}절: ${verseText}`;
+
+  const existingNote = bibleNotes[key] || "";
+  if (noteInputText) noteInputText.value = existingNote;
+
+  if (existingNote) {
+    if (btnDeleteNote) btnDeleteNote.classList.remove("hidden");
+  } else {
+    if (btnDeleteNote) btnDeleteNote.classList.add("hidden");
+  }
+
+  if (noteModal) noteModal.classList.remove("hidden");
+}
+
 function renderVerseCards(pVerses, sVerses) {
   pVerses.forEach((rawText, idx) => {
     const verseNum = idx + 1;
@@ -590,15 +669,34 @@ function renderVerseCards(pVerses, sVerses) {
     card.className = "verse-card";
     card.setAttribute("data-verse", verseNum);
 
+    // 단일 터치/클릭: 순수 구절 선택 및 하이라이트
     card.addEventListener("click", () => {
       onVerseClick(verseNum);
     });
 
-    let html = `<div class="verse-primary"><span class="verse-num">${verseNum}</span> ${cleanPrimary}</div>`;
+    // 더블클릭/더블터치: 구절 메모 작성 창 열기
+    card.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      openNoteModal(state.book, state.chapter, verseNum, cleanPrimary);
+    });
+
+    const noteKey = getVerseNoteKey(state.book, state.chapter, verseNum);
+    const existingNote = bibleNotes[noteKey];
+
+    let html = `<div class="verse-primary">
+      <span class="verse-num">${verseNum}</span> ${cleanPrimary}`;
+
+    if (existingNote) {
+      html += ` <span class="verse-note-indicator" title="메모 있음">📝 메모</span>`;
+    }
+    html += `</div>`;
+
+    if (existingNote) {
+      html += `<div class="verse-note-text-snippet">💬 ${existingNote}</div>`;
+    }
 
     if (sVerses && sVerses[idx]) {
       let cleanSecondary = sVerses[idx].replace(/[○◯⚪🔴⚫\u25cb]/g, "").trim();
-      // 대조 성경에서 [성경이름] 제외하고 순수 본문만 깔끔하게 표시
       html += `<div class="verse-secondary">${cleanSecondary}</div>`;
     }
 

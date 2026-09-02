@@ -446,6 +446,83 @@ body.theme-dark {
   cursor: pointer;
 }
 
+/* 성경 구절 더블클릭 메모 스타일 & 배지 */
+.verse-note-indicator {
+  display: inline-block;
+  background-color: #f1c40f;
+  color: #2c3e50;
+  font-size: 0.78rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.verse-note-text-snippet {
+  margin-top: 4px;
+  padding: 6px 10px;
+  background-color: rgba(241, 196, 15, 0.15);
+  border-left: 3px solid #f1c40f;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: var(--text-color);
+  font-style: italic;
+}
+
+.note-verse-preview {
+  padding: 10px;
+  background-color: var(--bg-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-left: 4px solid var(--accent-color);
+  color: var(--text-color);
+}
+
+.note-textarea {
+  width: 100%;
+  height: 120px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  font-size: 0.95rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.note-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.btn-note-save {
+  flex: 1;
+  padding: 10px;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-note-delete {
+  padding: 10px 16px;
+  background-color: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
 /* 설정 아이템 스타일 */
 .setting-item {
   display: flex;
