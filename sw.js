@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-app-cache-v3900';
+const CACHE_NAME = 'bible-app-cache-v4000';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

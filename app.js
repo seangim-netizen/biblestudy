@@ -206,6 +206,8 @@ function init() {
         if (boardAccordionArrow) boardAccordionArrow.textContent = "▼";
       }
     });
+  }
+
   // 데이터 백업(내보내기) 및 복구(불러오기) 제어
   const btnExportData = document.getElementById("btnExportData");
   const btnImportData = document.getElementById("btnImportData");
