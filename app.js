@@ -765,6 +765,14 @@ function togglePlayTTS() {
 }
 
 function playFromVerse(startVerse) {
+  var bgAudio = document.getElementById('bgSilentAudio');
+  if (bgAudio) {
+    try { bgAudio.play().catch(function(e){}); } catch(e) {}
+  }
+  if ('wakeLock' in navigator) {
+    try { navigator.wakeLock.request('screen').catch(function(e){}); } catch(e) {}
+  }
+
   safeCancelSpeech();
 
   const cards = bibleViewerEl.querySelectorAll(".verse-card");
