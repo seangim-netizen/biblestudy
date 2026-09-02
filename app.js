@@ -629,13 +629,13 @@ function renderVerseCards(pVerses, sVerses) {
   highlightVerse(state.selectedVerse);
 }
 
-// 구절 클릭/터치 시 동작 (재생 중이 아닐 때는 순수 하이라이트만 동작, 재생 시작되지 않음)
+// 구절 클릭/터치 시 동작 (재생 중이 아닐 때는 절대 재생이 시작되지 않고 순수 노란색 하이라이트만 작동)
 function onVerseClick(verseNum) {
   state.selectedVerse = verseNum;
   highlightVerse(verseNum);
 
-  if (isTTSSpeaking) {
-    // 이미 재생 중일 때만 터치한 구절부터 이어서 낭독
+  // 음성 낭독이 '실제로 진행 중'일 때만 터치한 구절부터 연결하여 낭독
+  if (isTTSSpeaking && !isTTSPaused) {
     playFromVerse(verseNum);
   }
 }
@@ -805,9 +805,18 @@ function speakNextTTS() {
 
   window.speechSynthesis.speak(utterance);
 
-  // iOS 백그라운드에서 speechSynthesis가 멈추거나 마비되는 것을 막는 주기적 킵어라이브 Watchdog (14초 감시)
+  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (bgAudio && bgAudio.paused) {
+    bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
+  }
+
+  // iOS 백그라운드에서 SpeechSynthesis 엔진 멈춤을 방지하는 1초 간격 킵어라이브 Watchdog
   ttsKeepAliveTimer = setInterval(() => {
     if (isTTSSpeaking && !isTTSPaused) {
+      if (bgAudio && bgAudio.paused) {
+        bgAudio.play().catch(e => {});
+      }
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       } else if (!window.speechSynthesis.speaking) {
@@ -819,7 +828,7 @@ function speakNextTTS() {
       clearInterval(ttsKeepAliveTimer);
       ttsKeepAliveTimer = null;
     }
-  }, 3000);
+  }, 1000);
 }
 
 function playPrevTTS() {
