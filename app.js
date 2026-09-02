@@ -765,7 +765,7 @@ function togglePlayTTS() {
 }
 
 function playFromVerse(startVerse) {
-  window.speechSynthesis.cancel();
+  safeCancelSpeech();
 
   const cards = bibleViewerEl.querySelectorAll(".verse-card");
   if (cards.length === 0) return;
@@ -858,9 +858,10 @@ function speakNextTTS() {
   let hasStepEnded = false;
 
   utterance.onend = () => {
-    if (hasStepEnded) return;
+    if (window.isTTSJumping) return;
+    if (!isTTSSpeaking || hasStepEnded) return;
     hasStepEnded = true;
-    if (isTTSSpeaking && !isTTSPaused) {
+    if (!isTTSPaused) {
       if (repeatMode === 'VERSE') {
         speakNextTTS();
       } else {
@@ -872,9 +873,10 @@ function speakNextTTS() {
 
   utterance.onerror = (e) => {
     console.error("TTS Error:", e);
-    if (hasStepEnded) return;
+    if (window.isTTSJumping) return;
+    if (!isTTSSpeaking || hasStepEnded) return;
     hasStepEnded = true;
-    if (isTTSSpeaking && !isTTSPaused) {
+    if (!isTTSPaused) {
       currentTTSIndex++;
       speakNextTTS();
     }
@@ -1039,6 +1041,19 @@ function resumeTTS() {
   }
 }
 
+window.isTTSJumping = false;
+function safeCancelSpeech() {
+  if ('speechSynthesis' in window) {
+    window.isTTSJumping = true;
+    try {
+      window.speechSynthesis.cancel();
+    } catch(e) {}
+    setTimeout(function() {
+      window.isTTSJumping = false;
+    }, 150);
+  }
+}
+
 function stopTTS() {
   isTTSSpeaking = false;
   isTTSPaused = false;
@@ -1048,10 +1063,12 @@ function stopTTS() {
     ttsKeepAliveTimer = null;
   }
 
-  try {
-    window.speechSynthesis.pause();
-    window.speechSynthesis.cancel();
-  } catch (e) {}
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.pause();
+      safeCancelSpeech();
+    } catch (e) {}
+  }
 
   currentTTSIndex = 0;
   ttsSpeechItems = [];
@@ -1061,7 +1078,7 @@ function stopTTS() {
 
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
-    bgAudio.pause();
+    try { bgAudio.pause(); } catch (e) {}
     try { bgAudio.currentTime = 0; } catch (e) {}
   }
 
