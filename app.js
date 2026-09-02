@@ -206,6 +206,64 @@ function init() {
         if (boardAccordionArrow) boardAccordionArrow.textContent = "▼";
       }
     });
+  // 데이터 백업(내보내기) 및 복구(불러오기) 제어
+  const btnExportData = document.getElementById("btnExportData");
+  const btnImportData = document.getElementById("btnImportData");
+  const fileImportData = document.getElementById("fileImportData");
+
+  if (btnExportData) {
+    btnExportData.addEventListener("click", () => {
+      const exportObject = {
+        readHistory: readHistory,
+        bibleNotes: bibleNotes,
+        exportedAt: new Date().toISOString()
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObject, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `성경통독_기록백업_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+  }
+
+  if (btnImportData && fileImportData) {
+    btnImportData.addEventListener("click", () => {
+      fileImportData.click();
+    });
+
+    fileImportData.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedData = JSON.parse(event.target.result);
+          if (importedData && (importedData.readHistory || importedData.bibleNotes)) {
+            if (importedData.readHistory) {
+              readHistory = importedData.readHistory;
+              saveReadHistory();
+            }
+            if (importedData.bibleNotes) {
+              bibleNotes = importedData.bibleNotes;
+              saveBibleNotes();
+            }
+            updateReadBadgeState();
+            renderSettingsBoardGrid();
+            renderBible();
+            alert("🎉 통독 읽음 기록 및 메모가 성공적으로 복구되었습니다!");
+          } else {
+            alert("⚠️ 올바른 성경 통독 백업 JSON 파일이 아닙니다.");
+          }
+        } catch (err) {
+          alert("⚠️ 파일 분석 중 오류가 발생했습니다. 올바른 백업 파일인지 확인해주세요.");
+        }
+      };
+      reader.readAsText(file);
+      fileImportData.value = "";
+    });
   }
 
   // 메모 모달 제어 이벤트
