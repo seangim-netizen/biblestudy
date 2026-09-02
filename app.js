@@ -208,66 +208,6 @@ function init() {
     });
   }
 
-  // 데이터 백업(내보내기) 및 복구(불러오기) 제어
-  const btnExportData = document.getElementById("btnExportData");
-  const btnImportData = document.getElementById("btnImportData");
-  const fileImportData = document.getElementById("fileImportData");
-
-  if (btnExportData) {
-    btnExportData.addEventListener("click", () => {
-      const exportObject = {
-        readHistory: readHistory,
-        bibleNotes: bibleNotes,
-        exportedAt: new Date().toISOString()
-      };
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObject, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `성경통독_기록백업_${new Date().toISOString().slice(0,10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    });
-  }
-
-  if (btnImportData && fileImportData) {
-    btnImportData.addEventListener("click", () => {
-      fileImportData.click();
-    });
-
-    fileImportData.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const importedData = JSON.parse(event.target.result);
-          if (importedData && (importedData.readHistory || importedData.bibleNotes)) {
-            if (importedData.readHistory) {
-              readHistory = importedData.readHistory;
-              saveReadHistory();
-            }
-            if (importedData.bibleNotes) {
-              bibleNotes = importedData.bibleNotes;
-              saveBibleNotes();
-            }
-            updateReadBadgeState();
-            renderSettingsBoardGrid();
-            renderBible();
-            alert("🎉 통독 읽음 기록 및 메모가 성공적으로 복구되었습니다!");
-          } else {
-            alert("⚠️ 올바른 성경 통독 백업 JSON 파일이 아닙니다.");
-          }
-        } catch (err) {
-          alert("⚠️ 파일 분석 중 오류가 발생했습니다. 올바른 백업 파일인지 확인해주세요.");
-        }
-      };
-      reader.readAsText(file);
-      fileImportData.value = "";
-    });
-  }
-
   // 메모 모달 제어 이벤트
   const btnCloseNote = document.getElementById("btnCloseNote");
   const btnSaveNote = document.getElementById("btnSaveNote");
@@ -825,15 +765,7 @@ function togglePlayTTS() {
 }
 
 function playFromVerse(startVerse) {
-  var bgAudio = document.getElementById('bgSilentAudio');
-  if (bgAudio) {
-    try { bgAudio.play().catch(function(e){}); } catch(e) {}
-  }
-  if ('wakeLock' in navigator) {
-    try { navigator.wakeLock.request('screen').catch(function(e){}); } catch(e) {}
-  }
-
-  safeCancelSpeech();
+  window.speechSynthesis.cancel();
 
   const cards = bibleViewerEl.querySelectorAll(".verse-card");
   if (cards.length === 0) return;
@@ -923,13 +855,12 @@ function speakNextTTS() {
   utterance.lang = (state.translation.startsWith("NI") || state.translation.startsWith("NL") || state.translation.startsWith("NK") || state.translation.startsWith("RS")) ? "en-US" : "ko-KR";
   utterance.rate = ttsRate;
 
-  let hasStepEnded = false;
-
   utterance.onend = () => {
-    if (window.isTTSJumping) return;
-    if (!isTTSSpeaking || hasStepEnded) return;
-    hasStepEnded = true;
-    if (!isTTSPaused) {
+    if (ttsKeepAliveTimer) {
+      clearInterval(ttsKeepAliveTimer);
+      ttsKeepAliveTimer = null;
+    }
+    if (isTTSSpeaking && !isTTSPaused) {
       if (repeatMode === 'VERSE') {
         speakNextTTS();
       } else {
@@ -941,76 +872,42 @@ function speakNextTTS() {
 
   utterance.onerror = (e) => {
     console.error("TTS Error:", e);
-    if (window.isTTSJumping) return;
-    if (!isTTSSpeaking || hasStepEnded) return;
-    hasStepEnded = true;
-    if (!isTTSPaused) {
+    if (ttsKeepAliveTimer) {
+      clearInterval(ttsKeepAliveTimer);
+      ttsKeepAliveTimer = null;
+    }
+    if (isTTSSpeaking && !isTTSPaused) {
       currentTTSIndex++;
       speakNextTTS();
     }
   };
 
-  if ('mediaSession' in navigator) {
-    try {
-      const unit = state.book === "시편" ? "편" : "장";
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: `${state.book} ${state.chapter}${unit} ${item.verse}절`,
-        artist: `성경 낭독 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
-        album: "성경 통독",
-        artwork: [
-          { src: 'app_logo.png', sizes: '512x512', type: 'image/png' },
-          { src: 'header_logo.png', sizes: '512x512', type: 'image/png' }
-        ]
-      });
-
-      navigator.mediaSession.setActionHandler('play', function() {
-        const bgAudio = document.getElementById('bgSilentAudio');
-        if (bgAudio) {
-          try { bgAudio.play().catch(function(e){}); } catch(e) {}
-        }
-        if ('speechSynthesis' in window) {
-          if (window.speechSynthesis.paused) {
-            try { window.speechSynthesis.resume(); } catch(e) {}
-            isTTSSpeaking = true;
-            isTTSPaused = false;
-            updateTTSPlayButtons(true);
-          } else if (!isTTSSpeaking) {
-            togglePlayTTS();
-          }
-        }
-      });
-      navigator.mediaSession.setActionHandler('pause', function() {
-        pauseTTS();
-      });
-      navigator.mediaSession.setActionHandler('previoustrack', function() {
-        playPrevTTS();
-      });
-      navigator.mediaSession.setActionHandler('nexttrack', function() {
-        playNextTTS();
-      });
-    } catch(e) {}
-  }
-
-  // iOS Safari 백그라운드 오디오 세션 획득을 위해 bgAudio.play()를 speechSynthesis.speak 전에 선행 실행
-  const bgAudio = document.getElementById('bgSilentAudio');
-  if (bgAudio) {
-    try {
-      bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
-    } catch(e) {}
-  }
-
   window.speechSynthesis.speak(utterance);
 
-  // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback (개인 통독앱과 동일한 3초 인터벌)
-  if (!window.ttsHeartbeatInterval) {
-    window.ttsHeartbeatInterval = setInterval(function() {
-      if (isTTSSpeaking && 'speechSynthesis' in window) {
-        if (window.speechSynthesis.paused) {
-          try { window.speechSynthesis.resume(); } catch(e) {}
-        }
-      }
-    }, 3000);
+  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (bgAudio && bgAudio.paused) {
+    bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
   }
+
+  // iOS 백그라운드에서 SpeechSynthesis 엔진 멈춤을 방지하는 1초 간격 킵어라이브 Watchdog
+  ttsKeepAliveTimer = setInterval(() => {
+    if (isTTSSpeaking && !isTTSPaused) {
+      if (bgAudio && bgAudio.paused) {
+        bgAudio.play().catch(e => {});
+      }
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      } else if (!window.speechSynthesis.speaking) {
+        clearInterval(ttsKeepAliveTimer);
+        ttsKeepAliveTimer = null;
+        speakNextTTS();
+      }
+    } else {
+      clearInterval(ttsKeepAliveTimer);
+      ttsKeepAliveTimer = null;
+    }
+  }, 1000);
 }
 
 function playPrevTTS() {
@@ -1109,19 +1006,6 @@ function resumeTTS() {
   }
 }
 
-window.isTTSJumping = false;
-function safeCancelSpeech() {
-  if ('speechSynthesis' in window) {
-    window.isTTSJumping = true;
-    try {
-      window.speechSynthesis.cancel();
-    } catch(e) {}
-    setTimeout(function() {
-      window.isTTSJumping = false;
-    }, 150);
-  }
-}
-
 function stopTTS() {
   isTTSSpeaking = false;
   isTTSPaused = false;
@@ -1131,12 +1015,10 @@ function stopTTS() {
     ttsKeepAliveTimer = null;
   }
 
-  if ('speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.pause();
-      safeCancelSpeech();
-    } catch (e) {}
-  }
+  try {
+    window.speechSynthesis.pause();
+    window.speechSynthesis.cancel();
+  } catch (e) {}
 
   currentTTSIndex = 0;
   ttsSpeechItems = [];
@@ -1146,7 +1028,7 @@ function stopTTS() {
 
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
-    try { bgAudio.pause(); } catch (e) {}
+    bgAudio.pause();
     try { bgAudio.currentTime = 0; } catch (e) {}
   }
 
@@ -1212,48 +1094,56 @@ function setupMediaSessionHandlers() {
     });
   }
 
+  // 블루투스 이어폰 탈착 및 사운드 출력 장치 해제 감지 (iOS / Android 공통)
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (bgAudio) {
+    bgAudio.addEventListener('pause', () => {
+      // 이어폰이 빠지거나 외부 미디어 오디오가 정지 요청되었을 때
+      if (isTTSSpeaking && !isTTSPaused && document.hidden) {
+        // 백그라운드 상태에서 오디오 출력이 멈춘 경우 즉시 일시정지
+        pauseTTS();
+      }
+    });
+  }
 }
 
-// -------------------------------------------------------------
-// 백그라운드 & 화면 켜짐/꺼짐 낭독 지속 유지 (개인 통독앱 검증 메커니즘)
-// -------------------------------------------------------------
-
-// 1. 앱 숨김 또는 타 앱 전환 시 오디오 세션 복구
-document.addEventListener('visibilitychange', function() {
-  if (document.hidden && isTTSSpeaking) {
-    var bgAudio = document.getElementById('bgSilentAudio');
-    if (bgAudio) {
-      try { bgAudio.play().catch(function(e){}); } catch(e) {}
-    }
-    if ('speechSynthesis' in window && window.speechSynthesis.paused) {
-      try { window.speechSynthesis.resume(); } catch(e) {}
+// 블루투스 이어폰 제거 감지 (HTML5 Audio / Web Audio Session API 연동)
+window.addEventListener('pagehide', () => {
+  if (isTTSSpeaking && !isTTSPaused) {
+    const bgAudio = document.getElementById('bgSilentAudio');
+    if (bgAudio && bgAudio.paused) {
+      pauseTTS();
     }
   }
 });
 
-// 2. 무음 MP3 재생 timeupdate 이벤트를 이용한 강력한 백그라운드 Keep-alive
-(function() {
-  var bgSilentAudioEl = document.getElementById('bgSilentAudio');
-  if (bgSilentAudioEl) {
-    bgSilentAudioEl.addEventListener('timeupdate', function() {
-      if (isTTSSpeaking && 'speechSynthesis' in window) {
-        if (window.speechSynthesis.paused) {
-          try { window.speechSynthesis.resume(); } catch(e) {}
-        }
-      }
-    });
-  }
-})();
-
-// 3. 화면으로 복귀 시 UI 및 TTS 낭독 상태 동기화 (백그라운드 재생 상태 보존)
+// 앱이 백그라운드로 내려가거나 화면이 꺼질 때 iOS 음성 엔진 복구 및 지속 유지
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible') {
-    if ('speechSynthesis' in window) {
-      if (window.speechSynthesis.paused && isTTSSpeaking) {
-        try { window.speechSynthesis.resume(); } catch(e) {}
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (document.hidden) {
+    if (isTTSSpeaking && !isTTSPaused) {
+      if (bgAudio && bgAudio.paused) {
+        bgAudio.play().catch(e => console.log("bgAudio play catch on hidden:", e));
+      }
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      } catch (e) {}
+    }
+  } else {
+    if (isTTSSpeaking && !isTTSPaused) {
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        if (!window.speechSynthesis.speaking) {
+          speakNextTTS();
+        }
+      } catch (e) {
+        speakNextTTS();
       }
     }
-    updateTTSPlayButtons(isTTSSpeaking && !isTTSPaused);
   }
 });
 

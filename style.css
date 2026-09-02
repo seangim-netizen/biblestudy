@@ -687,18 +687,15 @@ body.theme-dark .verse-card.is-reading {
 
 .tts-ctrl-btn {
   flex: 1;
-  padding: 10px 4px;
-  height: 42px;
+  max-width: 120px;
+  padding: 8px;
   border: 1px solid #ccc;
-  border-radius: 8px;
+  border-radius: 6px;
   background-color: var(--card-bg);
   color: var(--text-color);
   font-weight: bold;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .tts-play-btn {
@@ -709,18 +706,15 @@ body.theme-dark .verse-card.is-reading {
 
 .tts-sub-btn {
   flex: 1;
-  padding: 10px 4px;
-  height: 42px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  max-width: 110px;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
   background-color: var(--card-bg);
   color: var(--text-color);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: bold;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .tts-sub-btn.active {
@@ -831,35 +825,6 @@ body.theme-dark .verse-card.is-reading {
 body.theme-dark .grid-dot.checked {
   background-color: #27ae60 !important;
   color: #ffffff !important;
-}
-
-.backup-restore-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.btn-setting-backup, .btn-setting-restore {
-  flex: 1;
-  padding: 10px 8px;
-  border-radius: 8px;
-  font-size: 0.88rem;
-  font-weight: bold;
-  cursor: pointer;
-  border: 1px solid #ccc;
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  transition: background-color 0.2s ease;
-}
-
-.btn-setting-backup:hover {
-  background-color: #e8f4fc;
-  border-color: #3498db;
-}
-
-.btn-setting-restore:hover {
-  background-color: #eafaf1;
-  border-color: #2ecc71;
 }
 
 /* 메인 성경 본문 뷰어 하단 여백 및 아이폰 하단 바 간격 보장 */
