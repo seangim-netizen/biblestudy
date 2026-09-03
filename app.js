@@ -117,17 +117,28 @@ function init() {
     });
   }
 
-  btnPrevChapter.addEventListener("click", () => {
+  function gotoPrevChapter() {
     if (state.chapter > 1) {
       stopTTS();
       state.chapter--;
       state.selectedVerse = 1;
       updateChapterSelect();
       renderBible();
+    } else {
+      const currentBookIdx = BIBLE_BOOKS.findIndex(b => b.name === state.book);
+      if (currentBookIdx > 0) {
+        const prevBook = BIBLE_BOOKS[currentBookIdx - 1];
+        stopTTS();
+        state.book = prevBook.name;
+        state.chapter = prevBook.chapters;
+        state.selectedVerse = 1;
+        updateChapterSelect();
+        renderBible();
+      }
     }
-  });
+  }
 
-  btnNextChapter.addEventListener("click", () => {
+  function gotoNextChapter() {
     const bInfo = BIBLE_BOOKS.find(b => b.name === state.book);
     if (bInfo && state.chapter < bInfo.chapters) {
       stopTTS();
@@ -135,8 +146,54 @@ function init() {
       state.selectedVerse = 1;
       updateChapterSelect();
       renderBible();
+    } else {
+      const currentBookIdx = BIBLE_BOOKS.findIndex(b => b.name === state.book);
+      if (currentBookIdx < BIBLE_BOOKS.length - 1) {
+        const nextBook = BIBLE_BOOKS[currentBookIdx + 1];
+        stopTTS();
+        state.book = nextBook.name;
+        state.chapter = 1;
+        state.selectedVerse = 1;
+        updateChapterSelect();
+        renderBible();
+      }
     }
-  });
+  }
+
+  btnPrevChapter.addEventListener("click", gotoPrevChapter);
+  btnNextChapter.addEventListener("click", gotoNextChapter);
+
+  // 좌우 스와이프 장 넘기기 제스처 지원
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchEndX = 0;
+  let touchEndY = 0;
+
+  bibleViewerEl.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  bibleViewerEl.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleSwipeGesture();
+  }, { passive: true });
+
+  function handleSwipeGesture() {
+    const diffX = touchEndX - touchStartX;
+    const diffY = touchEndY - touchStartY;
+    // 수평 스와이프 조작 판별 (가로 이동거리가 60px 이상이고 세로 이동거리보다 큰 경우)
+    if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+      if (diffX < 0) {
+        // 왼쪽으로 스와이프 -> 다음 장
+        gotoNextChapter();
+      } else {
+        // 오른쪽으로 스와이프 -> 이전 장
+        gotoPrevChapter();
+      }
+    }
+  }
 
   // 재생 버튼 이벤트
   if (btnAudioTTSPlay) btnAudioTTSPlay.addEventListener("click", togglePlayTTS);
@@ -618,6 +675,7 @@ function renderBible() {
       renderVerseCards(pVerses, null);
     }
     updateReadBadgeState();
+    window.scrollTo({ top: 0, behavior: 'instant' });
   });
 }
 

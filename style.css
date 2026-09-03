@@ -687,15 +687,18 @@ body.theme-dark .verse-card.is-reading {
 
 .tts-ctrl-btn {
   flex: 1;
-  max-width: 120px;
-  padding: 8px;
+  height: 42px;
+  padding: 8px 4px;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 8px;
   background-color: var(--card-bg);
   color: var(--text-color);
   font-weight: bold;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tts-play-btn {
@@ -706,15 +709,18 @@ body.theme-dark .verse-card.is-reading {
 
 .tts-sub-btn {
   flex: 1;
-  max-width: 110px;
-  padding: 6px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  height: 42px;
+  padding: 8px 4px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
   background-color: var(--card-bg);
   color: var(--text-color);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: bold;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tts-sub-btn.active {
