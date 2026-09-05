@@ -896,10 +896,10 @@ function playFromVerse(startVerse) {
 let ttsKeepAliveTimer = null;
 
 function speakNextTTS() {
-  // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback (개인통독앱과 100% 동일 3초 인터벌)
+  // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback
   if (!window.ttsHeartbeatInterval) {
     window.ttsHeartbeatInterval = setInterval(function() {
-      if (isTTSSpeaking && 'speechSynthesis' in window) {
+      if (isTTSSpeaking && !isTTSPaused && 'speechSynthesis' in window) {
         if (window.speechSynthesis.paused) {
           try { window.speechSynthesis.resume(); } catch(e) {}
         }
@@ -1207,11 +1207,11 @@ function setupMediaSessionHandlers() {
     });
   }
 
-  // 백그라운드 재생 지속을 위한 무음 오디오 timeupdate 이벤트 하트비트 (개인통독앱과 100% 동일 사양)
+  // 백그라운드 재생 지속을 위한 무음 오디오 timeupdate 이벤트 하트비트
   const bgSilentAudioEl = document.getElementById('bgSilentAudio');
   if (bgSilentAudioEl) {
     bgSilentAudioEl.addEventListener('timeupdate', function() {
-      if (isTTSSpeaking && 'speechSynthesis' in window) {
+      if (isTTSSpeaking && !isTTSPaused && 'speechSynthesis' in window) {
         if (window.speechSynthesis.paused) {
           try { window.speechSynthesis.resume(); } catch(e) {}
         }
@@ -1225,9 +1225,9 @@ function setupMediaSessionHandlers() {
   }
 }
 
-// Keep Audio Playing when Hiding App or Switching to Other Apps (개인통독앱과 100% 동일 사양)
+// Keep Audio Playing when Hiding App or Switching to Other Apps (단, 일시정지 상태가 아닐 때만)
 document.addEventListener('visibilitychange', function() {
-  if (document.hidden && isTTSSpeaking) {
+  if (document.hidden && isTTSSpeaking && !isTTSPaused) {
     const bgAudio = document.getElementById('bgSilentAudio');
     if (bgAudio) {
       try { bgAudio.play().catch(function(e){}); } catch(e) {}
