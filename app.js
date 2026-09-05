@@ -810,22 +810,29 @@ function highlightVerse(verseNum) {
 // TTS 음성 낭독 컨트롤
 // -------------------------------------------------------------
 function togglePlayTTS() {
+  const bgAudio = document.getElementById('bgSilentAudio');
+  if (bgAudio) {
+    try { bgAudio.play().catch(e => {}); } catch(e) {}
+  }
+  if ('wakeLock' in navigator) {
+    try { navigator.wakeLock.request('screen').catch(e => {}); } catch(e) {}
+  }
   if (!('speechSynthesis' in window)) {
     alert("이 브라우저는 음성 낭독(TTS)을 지원하지 않습니다.");
     return;
   }
 
-  // iOS Safari touch unlock & 백그라운드 오디오 준비 (HTML5 Audio + Web Audio API 듀얼 유지)
-  startWebAudioKeepAlive();
-  const bgAudio = document.getElementById('bgSilentAudio');
-  if (bgAudio) {
-    bgAudio.play().catch(e => {});
+  // iOS/Safari lock screen suspend recovery: if paused, forcefully resume immediately
+  if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+    try {
+      window.speechSynthesis.resume();
+      isTTSSpeaking = true;
+      isTTSPaused = false;
+      updateTTSPlayButtons(true);
+      if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
+      return;
+    } catch(e) {}
   }
-
-  try {
-    const unlockUtterance = new SpeechSynthesisUtterance("");
-    window.speechSynthesis.speak(unlockUtterance);
-  } catch (e) {}
 
   if (isTTSSpeaking) {
     if (isTTSPaused) {
@@ -840,7 +847,7 @@ function togglePlayTTS() {
 }
 
 function playFromVerse(startVerse) {
-  window.speechSynthesis.cancel();
+  safeCancelSpeech();
 
   const cards = bibleViewerEl.querySelectorAll(".verse-card");
   if (cards.length === 0) return;
@@ -1077,46 +1084,6 @@ function resumeTTS() {
   }
 }
 
-let audioCtx = null;
-let keepAliveOsc = null;
-
-function startWebAudioKeepAlive() {
-  try {
-    if (!audioCtx) {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtxClass) {
-        audioCtx = new AudioCtxClass();
-      }
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-    if (audioCtx && !keepAliveOsc) {
-      keepAliveOsc = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      gainNode.gain.value = 0.0001; // 거의 무음에 가까운 하트비트 소리
-      keepAliveOsc.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      keepAliveOsc.start();
-    }
-  } catch (e) {
-    console.log("WebAudio KeepAlive Catch:", e);
-  }
-}
-
-function stopWebAudioKeepAlive() {
-  try {
-    if (keepAliveOsc) {
-      keepAliveOsc.stop();
-      keepAliveOsc.disconnect();
-      keepAliveOsc = null;
-    }
-    if (audioCtx && audioCtx.state !== 'closed') {
-      audioCtx.suspend();
-    }
-  } catch (e) {}
-}
-
 window.isTTSJumping = false;
 function safeCancelSpeech() {
   if ('speechSynthesis' in window) {
@@ -1131,8 +1098,6 @@ function safeCancelSpeech() {
 }
 
 function stopTTS(isFullReset = true) {
-  stopWebAudioKeepAlive();
-
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
     try { bgAudio.pause(); } catch(e) {}
