@@ -1212,27 +1212,23 @@ function setupMediaSessionHandlers() {
     });
   }
 
-  // 블루투스 이어폰 탈착 및 사운드 출력 장치 해제 감지 (iOS / Android 공통)
-  const bgAudio = document.getElementById('bgSilentAudio');
-  if (bgAudio) {
-    bgAudio.addEventListener('pause', () => {
-      // 오디오가 멈췄을 때 TTS가 계속 작동 중이면 무음 오디오 재개
+  // 백그라운드 재생 지속을 위한 무음 오디오 timeupdate 이벤트 하트비트 (개인통독앱과 100% 동일 사양)
+  const bgSilentAudioEl = document.getElementById('bgSilentAudio');
+  if (bgSilentAudioEl) {
+    bgSilentAudioEl.addEventListener('timeupdate', function() {
+      if (isTTSSpeaking && 'speechSynthesis' in window) {
+        if (window.speechSynthesis.paused) {
+          try { window.speechSynthesis.resume(); } catch(e) {}
+        }
+      }
+    });
+    bgSilentAudioEl.addEventListener('pause', function() {
       if (isTTSSpeaking && !isTTSPaused) {
-        bgAudio.play().catch(e => {});
+        try { bgSilentAudioEl.play().catch(function(e){}); } catch(e) {}
       }
     });
   }
 }
-
-// 백그라운드 전환 시 오디오 세션 유지
-window.addEventListener('pagehide', () => {
-  if (isTTSSpeaking && !isTTSPaused) {
-    const bgAudio = document.getElementById('bgSilentAudio');
-    if (bgAudio && bgAudio.paused) {
-      bgAudio.play().catch(e => {});
-    }
-  }
-});
 
 // 앱이 백그라운드로 내려가거나 화면이 꺼질 때 iOS 음성 엔진 복구 및 지속 유지
 document.addEventListener('visibilitychange', function() {
@@ -1240,7 +1236,7 @@ document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
     if (isTTSSpeaking && !isTTSPaused) {
       if (bgAudio && bgAudio.paused) {
-        bgAudio.play().catch(e => console.log("bgAudio play catch on hidden:", e));
+        try { bgAudio.play().catch(e => {}); } catch(e) {}
       }
       try {
         if (window.speechSynthesis.paused) {
