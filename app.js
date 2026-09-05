@@ -386,6 +386,12 @@ function init() {
 
 
 
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js?v=8000').then((reg) => {
+      reg.update();
+    }).catch(e => {});
+  }
+
   setupMediaSessionHandlers();
 
   updateChapterSelect();
@@ -921,6 +927,43 @@ function speakNextTTS() {
   highlightVerse(item.verse);
   if (item.element) {
     item.element.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // Update Lock Screen & Background Media Control Center per verse (개인통독 100% 동일 사양)
+  if ('mediaSession' in navigator && item) {
+    try {
+      const unit = state.book === "시편" ? "편" : "장";
+      const infoText = `${state.book} ${state.chapter}${unit} ${item.verse}절: ${item.text}`;
+      const absoluteLogo = new URL('app_logo.png?v=8000', window.location.href).href;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: infoText.length > 35 ? infoText.substring(0, 35) + '...' : infoText,
+        artist: `성경 낭독 (개인용 성경앱)`,
+        album: `${state.book} ${state.chapter}${unit}`,
+        artwork: [
+          { src: absoluteLogo, sizes: '512x512', type: 'image/png' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', function() {
+        const bgAudio = document.getElementById('bgSilentAudio');
+        if (bgAudio) {
+          try { bgAudio.play().catch(function(e){}); } catch(e) {}
+        }
+        resumeTTS();
+      });
+      navigator.mediaSession.setActionHandler('pause', function() {
+        stopTTS(false);
+      });
+      navigator.mediaSession.setActionHandler('stop', function() {
+        stopTTS(true);
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', function() {
+        playPrevTTS();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', function() {
+        playNextTTS();
+      });
+    } catch(e) {}
   }
 
   if (ttsKeepAliveTimer) {

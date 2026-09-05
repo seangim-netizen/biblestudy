@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-app-cache-v7700';
+const CACHE_NAME = 'bible-app-cache-v8000';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -8,25 +8,18 @@ const ASSETS_TO_CACHE = [
   './header_logo.png',
   './symbol_logo.png',
   './app_logo.png',
-  './bible_db_66.js',
-  './bible_data/bible_db_easy.js',
-  './bible_data/bible_db_hyundai.js',
-  './bible_data/bible_db_niv.js',
-  './bible_data/bible_db_nlt.js',
-  './bible_data/bible_db_nkjv.js',
-  './bible_data/bible_db_rsv.js'
+  './bible_db_66.js'
 ];
 
-// 서비스 워커 설치 시 핵심 파일 프리캐싱
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// 활성화 시 이전 캐시 정리
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -41,31 +34,44 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 캐시 우선 및 오프라인 비행기모드 완벽 지원 (Cache First with Network Fallback)
+// Network First for HTML, JS, CSS, JSON to guarantee instant updates on deploy
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // 네트워크 연결 시 배경에서 업데이트
-        fetch(event.request).then((networkResponse) => {
+  const url = new URL(event.request.url);
+  const isCodeAsset = url.pathname.endsWith('.html') || 
+                      url.pathname.endsWith('.js') || 
+                      url.pathname.endsWith('.css') || 
+                      url.pathname.endsWith('.json') ||
+                      url.pathname === '/' ||
+                      url.pathname.endsWith('/');
+
+  if (isCodeAsset) {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(event.request);
+      })
+    );
+  } else {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(event.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
+              cache.put(event.request, responseToCache);
             });
           }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse;
-        }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
         });
-        return networkResponse;
-      });
-    })
-  );
+      })
+    );
+  }
 });
