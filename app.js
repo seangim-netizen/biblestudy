@@ -935,6 +935,7 @@ function speakNextTTS() {
 
   // Global reference to prevent iOS WebKit SpeechSynthesisUtterance Garbage Collection
   window.currentUtterance = utterance;
+  window.isTTSJumping = false;
 
   let hasStepEnded = false;
 
@@ -1046,7 +1047,7 @@ function resumeTTS() {
     } catch(e) {}
   }
 
-  // iOS에서 pause 상태 후 utterance가 해제된 경우 구절부터 새로 낭독 재개
+  // iOS 잠금 화면에서 pause 상태 후 utterance가 해제된 경우 해당 구절부터 낭독 재개
   if (ttsSpeechItems.length === 0) {
     playFromVerse(state.selectedVerse || 1);
     return;
@@ -1134,12 +1135,13 @@ function updateTTSPlayButtons(isPlaying) {
 function updateMediaSession() {
   if ('mediaSession' in navigator && window.MediaMetadata) {
     const unit = state.book === "시편" ? "편" : "장";
+    const absoluteLogo = new URL('symbol_logo.png', window.location.href).href;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `${state.book} ${state.chapter}${unit} ${state.selectedVerse || 1}절`,
       artist: `성경 낭독 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
       album: "개인용 성경앱",
       artwork: [
-        { src: 'symbol_logo.png', sizes: '512x512', type: 'image/png' }
+        { src: absoluteLogo, sizes: '512x512', type: 'image/png' }
       ]
     });
   }
