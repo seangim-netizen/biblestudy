@@ -972,31 +972,11 @@ function speakNextTTS() {
     window.speechSynthesis.speak(utterance);
   }
 
-  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 및 Web Audio 하트비트 엔진 재개
-  startWebAudioKeepAlive();
+  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개 (개인통독앱 100% 동일)
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio && bgAudio.paused) {
-    bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
+    try { bgAudio.play().catch(e => {}); } catch(e) {}
   }
-
-  // iOS 백그라운드에서 SpeechSynthesis 엔진 멈춤을 방지하는 1초 간격 킵어라이브 Watchdog
-  ttsKeepAliveTimer = setInterval(() => {
-    if (isTTSSpeaking && !isTTSPaused) {
-      if (bgAudio && bgAudio.paused) {
-        bgAudio.play().catch(e => {});
-      }
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-      } else if (!window.speechSynthesis.speaking) {
-        clearInterval(ttsKeepAliveTimer);
-        ttsKeepAliveTimer = null;
-        speakNextTTS();
-      }
-    } else {
-      clearInterval(ttsKeepAliveTimer);
-      ttsKeepAliveTimer = null;
-    }
-  }, 1000);
 }
 
 function playPrevTTS() {
@@ -1261,6 +1241,19 @@ function setupMediaSessionHandlers() {
   }
 }
 
+// Keep Audio Playing when Hiding App or Switching to Other Apps (개인통독앱과 100% 동일 사양)
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden && isTTSSpeaking) {
+    const bgAudio = document.getElementById('bgSilentAudio');
+    if (bgAudio) {
+      try { bgAudio.play().catch(function(e){}); } catch(e) {}
+    }
+    if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+      try { window.speechSynthesis.resume(); } catch(e) {}
+    }
+  }
+});
+
 // Sync UI and variables immediately when returning from background/screen off (개인통독앱과 100% 동일 사양)
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') {
@@ -1281,36 +1274,6 @@ document.addEventListener('visibilitychange', function() {
       }
     }
     updateTTSPlayButtons(isTTSSpeaking && !isTTSPaused);
-  }
-});
-
-// 앱이 백그라운드로 내려가거나 화면이 꺼질 때 iOS 음성 엔진 복구 및 지속 유지
-document.addEventListener('visibilitychange', function() {
-  const bgAudio = document.getElementById('bgSilentAudio');
-  if (document.hidden) {
-    if (isTTSSpeaking && !isTTSPaused) {
-      if (bgAudio && bgAudio.paused) {
-        try { bgAudio.play().catch(e => {}); } catch(e) {}
-      }
-      try {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
-      } catch (e) {}
-    }
-  } else {
-    if (isTTSSpeaking && !isTTSPaused) {
-      try {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
-        if (!window.speechSynthesis.speaking) {
-          speakNextTTS();
-        }
-      } catch (e) {
-        speakNextTTS();
-      }
-    }
   }
 });
 
