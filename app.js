@@ -822,24 +822,10 @@ function togglePlayTTS() {
     return;
   }
 
-  // iOS/Safari lock screen suspend recovery: if paused, forcefully resume immediately
-  if ('speechSynthesis' in window && window.speechSynthesis.paused) {
-    try {
-      window.speechSynthesis.resume();
-      isTTSSpeaking = true;
-      isTTSPaused = false;
-      updateTTSPlayButtons(true);
-      if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
-      return;
-    } catch(e) {}
-  }
-
-  if (isTTSSpeaking) {
-    if (isTTSPaused) {
-      resumeTTS();
-    } else {
-      pauseTTS();
-    }
+  if (isTTSPaused) {
+    resumeTTS();
+  } else if (isTTSSpeaking) {
+    pauseTTS();
   } else {
     // 터치하거나 선택해둔 절부터 바로 재생 시작 및 플레이어 박스 열기
     playFromVerse(state.selectedVerse || 1);
@@ -907,7 +893,7 @@ function speakNextTTS() {
     }, 3000);
   }
 
-  if (!isTTSSpeaking) return;
+  if (!isTTSSpeaking || isTTSPaused) return;
 
   if (currentTTSIndex >= ttsSpeechItems.length) {
     // 낭독 재생 완료 시 자동으로 해당 장 '읽음 완료' 처리
@@ -962,7 +948,7 @@ function speakNextTTS() {
   utterance.onend = () => {
     window.currentUtterance = null;
     if (window.isTTSJumping) return;
-    if (!isTTSSpeaking || hasStepEnded) return;
+    if (!isTTSSpeaking || isTTSPaused || hasStepEnded) return;
     hasStepEnded = true;
     if (repeatMode === 'VERSE') {
       speakNextTTS();
@@ -975,7 +961,7 @@ function speakNextTTS() {
   utterance.onerror = (e) => {
     window.currentUtterance = null;
     if (window.isTTSJumping) return;
-    if (!isTTSSpeaking || hasStepEnded) return;
+    if (!isTTSSpeaking || isTTSPaused || hasStepEnded) return;
     hasStepEnded = true;
     currentTTSIndex++;
     speakNextTTS();
@@ -985,7 +971,7 @@ function speakNextTTS() {
     window.speechSynthesis.speak(utterance);
   }
 
-  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개 (개인통독앱 100% 동일)
+  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio && bgAudio.paused) {
     try { bgAudio.play().catch(e => {}); } catch(e) {}
@@ -993,7 +979,7 @@ function speakNextTTS() {
 }
 
 function playPrevTTS() {
-  if (!isTTSSpeaking) return;
+  if (!isTTSSpeaking && !isTTSPaused) return;
   if (currentTTSIndex > 0) {
     safeCancelSpeech();
     currentTTSIndex--;
@@ -1003,7 +989,7 @@ function playPrevTTS() {
 }
 
 function playNextTTS() {
-  if (!isTTSSpeaking) return;
+  if (!isTTSSpeaking && !isTTSPaused) return;
   if (currentTTSIndex < ttsSpeechItems.length - 1) {
     safeCancelSpeech();
     currentTTSIndex++;
@@ -1047,15 +1033,17 @@ function toggleRepeatMode() {
 }
 
 function pauseTTS() {
-  if (!isTTSSpeaking) return;
+  isTTSSpeaking = false;
   isTTSPaused = true;
   try {
-    window.speechSynthesis.pause();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.pause();
+    }
   } catch (e) {}
   
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
-    bgAudio.pause();
+    try { bgAudio.pause(); } catch(e) {}
   }
   
   updateTTSPlayButtons(false);
@@ -1065,18 +1053,18 @@ function pauseTTS() {
 }
 
 function resumeTTS() {
-  if (!isTTSSpeaking) return;
+  isTTSSpeaking = true;
   isTTSPaused = false;
   
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
-    bgAudio.play().catch(e => {});
+    try { bgAudio.play().catch(e => {}); } catch(e) {}
   }
   
   try {
-    if (window.speechSynthesis.paused) {
+    if ('speechSynthesis' in window && window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
-    } else if (!window.speechSynthesis.speaking) {
+    } else {
       speakNextTTS();
     }
   } catch (e) {
@@ -1178,23 +1166,10 @@ function updateMediaSession() {
 function setupMediaSessionHandlers() {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => {
-      const bgAudio = document.getElementById('bgSilentAudio');
-      if (bgAudio) {
-        try { bgAudio.play().catch(e => {}); } catch(e) {}
-      }
-      if ('speechSynthesis' in window) {
-        if (window.speechSynthesis.paused) {
-          try { window.speechSynthesis.resume(); } catch(e) {}
-          isTTSSpeaking = true;
-          isTTSPaused = false;
-          updateTTSPlayButtons(true);
-        } else if (!isTTSSpeaking) {
-          togglePlayTTS();
-        }
-      }
+      resumeTTS();
     });
     navigator.mediaSession.setActionHandler('pause', () => {
-      stopTTS(false);
+      pauseTTS();
     });
     navigator.mediaSession.setActionHandler('stop', () => {
       stopTTS(true);
@@ -1219,7 +1194,7 @@ function setupMediaSessionHandlers() {
     });
     bgSilentAudioEl.addEventListener('pause', function() {
       if (isTTSSpeaking && !isTTSPaused) {
-        stopTTS(false);
+        pauseTTS();
       }
     });
   }
