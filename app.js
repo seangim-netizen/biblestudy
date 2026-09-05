@@ -872,6 +872,10 @@ function playFromVerse(startVerse) {
   let startIndex = ttsSpeechItems.findIndex(item => item.verse === startVerse);
   if (startIndex === -1) startIndex = 0;
 
+  if ('wakeLock' in navigator) {
+    try { navigator.wakeLock.request('screen').catch(function(e){}); } catch(e) {}
+  }
+
   isTTSSpeaking = true;
   isTTSPaused = false;
   currentTTSIndex = startIndex;
@@ -885,6 +889,17 @@ function playFromVerse(startVerse) {
 let ttsKeepAliveTimer = null;
 
 function speakNextTTS() {
+  // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback (개인통독앱과 100% 동일 3초 인터벌)
+  if (!window.ttsHeartbeatInterval) {
+    window.ttsHeartbeatInterval = setInterval(function() {
+      if (isTTSSpeaking && 'speechSynthesis' in window) {
+        if (window.speechSynthesis.paused) {
+          try { window.speechSynthesis.resume(); } catch(e) {}
+        }
+      }
+    }, 3000);
+  }
+
   if (!isTTSSpeaking) return;
 
   if (currentTTSIndex >= ttsSpeechItems.length) {
@@ -1229,6 +1244,29 @@ function setupMediaSessionHandlers() {
     });
   }
 }
+
+// Sync UI and variables immediately when returning from background/screen off (개인통독앱과 100% 동일 사양)
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') {
+    if ('speechSynthesis' in window) {
+      if (window.speechSynthesis.speaking) {
+        if (window.speechSynthesis.paused) {
+          isTTSSpeaking = false;
+          isTTSPaused = true;
+        } else {
+          isTTSSpeaking = true;
+          isTTSPaused = false;
+        }
+      } else {
+        if (!isTTSPaused) {
+          isTTSSpeaking = false;
+          isTTSPaused = false;
+        }
+      }
+    }
+    updateTTSPlayButtons(isTTSSpeaking && !isTTSPaused);
+  }
+});
 
 // 앱이 백그라운드로 내려가거나 화면이 꺼질 때 iOS 음성 엔진 복구 및 지속 유지
 document.addEventListener('visibilitychange', function() {
