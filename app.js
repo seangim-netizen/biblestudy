@@ -944,35 +944,33 @@ function speakNextTTS() {
   const utterance = new SpeechSynthesisUtterance(item.text);
   utterance.lang = (state.translation.startsWith("NI") || state.translation.startsWith("NL") || state.translation.startsWith("NK") || state.translation.startsWith("RS")) ? "en-US" : "ko-KR";
   utterance.rate = ttsRate;
+  utterance.pitch = 1.0;
+
+  let hasStepEnded = false;
 
   utterance.onend = () => {
-    if (ttsKeepAliveTimer) {
-      clearInterval(ttsKeepAliveTimer);
-      ttsKeepAliveTimer = null;
-    }
-    if (isTTSSpeaking && !isTTSPaused) {
-      if (repeatMode === 'VERSE') {
-        speakNextTTS();
-      } else {
-        currentTTSIndex++;
-        speakNextTTS();
-      }
-    }
-  };
-
-  utterance.onerror = (e) => {
-    console.error("TTS Error:", e);
-    if (ttsKeepAliveTimer) {
-      clearInterval(ttsKeepAliveTimer);
-      ttsKeepAliveTimer = null;
-    }
-    if (isTTSSpeaking && !isTTSPaused) {
+    if (window.isTTSJumping) return;
+    if (!isTTSSpeaking || hasStepEnded) return;
+    hasStepEnded = true;
+    if (repeatMode === 'VERSE') {
+      speakNextTTS();
+    } else {
       currentTTSIndex++;
       speakNextTTS();
     }
   };
 
-  window.speechSynthesis.speak(utterance);
+  utterance.onerror = (e) => {
+    if (window.isTTSJumping) return;
+    if (!isTTSSpeaking || hasStepEnded) return;
+    hasStepEnded = true;
+    currentTTSIndex++;
+    speakNextTTS();
+  };
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.speak(utterance);
+  }
 
   // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 및 Web Audio 하트비트 엔진 재개
   startWebAudioKeepAlive();
@@ -1004,6 +1002,7 @@ function speakNextTTS() {
 function playPrevTTS() {
   if (!isTTSSpeaking) return;
   if (currentTTSIndex > 0) {
+    safeCancelSpeech();
     currentTTSIndex--;
     const item = ttsSpeechItems[currentTTSIndex];
     playFromVerse(item.verse);
@@ -1013,6 +1012,7 @@ function playPrevTTS() {
 function playNextTTS() {
   if (!isTTSSpeaking) return;
   if (currentTTSIndex < ttsSpeechItems.length - 1) {
+    safeCancelSpeech();
     currentTTSIndex++;
     const item = ttsSpeechItems[currentTTSIndex];
     playFromVerse(item.verse);
@@ -1137,36 +1137,52 @@ function stopWebAudioKeepAlive() {
   } catch (e) {}
 }
 
-function stopTTS() {
-  isTTSSpeaking = false;
-  isTTSPaused = false;
-
-  stopWebAudioKeepAlive();
-
-  if (ttsKeepAliveTimer) {
-    clearInterval(ttsKeepAliveTimer);
-    ttsKeepAliveTimer = null;
+window.isTTSJumping = false;
+function safeCancelSpeech() {
+  if ('speechSynthesis' in window) {
+    window.isTTSJumping = true;
+    try {
+      window.speechSynthesis.cancel();
+    } catch(e) {}
+    setTimeout(function() {
+      window.isTTSJumping = false;
+    }, 150);
   }
+}
 
-  try {
-    window.speechSynthesis.pause();
-    window.speechSynthesis.cancel();
-  } catch (e) {}
-
-  currentTTSIndex = 0;
-  ttsSpeechItems = [];
-
-  updateTTSPlayButtons(false);
-  if (ttsPlayerBox) ttsPlayerBox.classList.add("hidden");
+function stopTTS(isFullReset = true) {
+  stopWebAudioKeepAlive();
 
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
-    bgAudio.pause();
-    try { bgAudio.currentTime = 0; } catch (e) {}
+    try { bgAudio.pause(); } catch(e) {}
+  }
+  isTTSSpeaking = false;
+
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.pause();
+      if (isFullReset) {
+        safeCancelSpeech();
+      }
+    } catch(e) {}
   }
 
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.playbackState = "none";
+  if (isFullReset) {
+    isTTSPaused = false;
+    currentTTSIndex = 0;
+    ttsSpeechItems = [];
+    updateTTSPlayButtons(false);
+    if (ttsPlayerBox) ttsPlayerBox.classList.add("hidden");
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = "none";
+    }
+  } else {
+    isTTSPaused = true;
+    updateTTSPlayButtons(false);
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = "paused";
+    }
   }
 }
 
