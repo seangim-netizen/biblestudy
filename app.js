@@ -953,9 +953,14 @@ function speakNextTTS() {
   utterance.rate = ttsRate;
   utterance.pitch = 1.0;
 
+  // Global reference to prevent iOS WebKit SpeechSynthesisUtterance Garbage Collection
+  window.currentUtterance = utterance;
+  window.isTTSJumping = false;
+
   let hasStepEnded = false;
 
   utterance.onend = () => {
+    window.currentUtterance = null;
     if (window.isTTSJumping) return;
     if (!isTTSSpeaking || hasStepEnded) return;
     hasStepEnded = true;
@@ -968,6 +973,7 @@ function speakNextTTS() {
   };
 
   utterance.onerror = (e) => {
+    window.currentUtterance = null;
     if (window.isTTSJumping) return;
     if (!isTTSSpeaking || hasStepEnded) return;
     hasStepEnded = true;
@@ -1172,13 +1178,26 @@ function updateMediaSession() {
 function setupMediaSessionHandlers() {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => {
-      resumeTTS();
+      const bgAudio = document.getElementById('bgSilentAudio');
+      if (bgAudio) {
+        try { bgAudio.play().catch(e => {}); } catch(e) {}
+      }
+      if ('speechSynthesis' in window) {
+        if (window.speechSynthesis.paused) {
+          try { window.speechSynthesis.resume(); } catch(e) {}
+          isTTSSpeaking = true;
+          isTTSPaused = false;
+          updateTTSPlayButtons(true);
+        } else if (!isTTSSpeaking) {
+          togglePlayTTS();
+        }
+      }
     });
     navigator.mediaSession.setActionHandler('pause', () => {
-      pauseTTS();
+      stopTTS(false);
     });
     navigator.mediaSession.setActionHandler('stop', () => {
-      stopTTS();
+      stopTTS(true);
     });
     navigator.mediaSession.setActionHandler('previoustrack', () => {
       playPrevTTS();
@@ -1200,7 +1219,7 @@ function setupMediaSessionHandlers() {
     });
     bgSilentAudioEl.addEventListener('pause', function() {
       if (isTTSSpeaking && !isTTSPaused) {
-        try { bgSilentAudioEl.play().catch(function(e){}); } catch(e) {}
+        stopTTS(false);
       }
     });
   }
