@@ -36,14 +36,25 @@ const TRANSLATIONS = {
   RSV: { name: "RSV (영어)", varName: "BIBLE_DB_RSV", path: "bible_data/bible_db_rsv.js" }
 };
 
-// 현재 상태
+// 현재 상태 (마지막 읽은 장 localStorage에서 복원)
+const savedLastRead = JSON.parse(localStorage.getItem("bible_last_read_location") || "{}");
 let state = {
-  book: "창세기",
-  chapter: 1,
-  translation: "KG",
-  secondaryTranslation: "NONE",
-  selectedVerse: 1
+  book: savedLastRead.book || "창세기",
+  chapter: savedLastRead.chapter || 1,
+  translation: savedLastRead.translation || "KG",
+  secondaryTranslation: savedLastRead.secondaryTranslation || "NONE",
+  selectedVerse: savedLastRead.selectedVerse || 1
 };
+
+function saveLastReadLocation() {
+  localStorage.setItem("bible_last_read_location", JSON.stringify({
+    book: state.book,
+    chapter: state.chapter,
+    translation: state.translation,
+    secondaryTranslation: state.secondaryTranslation,
+    selectedVerse: state.selectedVerse
+  }));
+}
 
 // TTS 상태
 let isTTSSpeaking = false;
@@ -675,6 +686,7 @@ function renderBible() {
       renderVerseCards(pVerses, null);
     }
     updateReadBadgeState();
+    saveLastReadLocation();
     window.scrollTo({ top: 0, behavior: 'instant' });
   });
 }
@@ -1156,21 +1168,20 @@ function setupMediaSessionHandlers() {
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
     bgAudio.addEventListener('pause', () => {
-      // 이어폰이 빠지거나 외부 미디어 오디오가 정지 요청되었을 때
-      if (isTTSSpeaking && !isTTSPaused && document.hidden) {
-        // 백그라운드 상태에서 오디오 출력이 멈춘 경우 즉시 일시정지
-        pauseTTS();
+      // 오디오가 멈췄을 때 TTS가 계속 작동 중이면 무음 오디오 재개
+      if (isTTSSpeaking && !isTTSPaused) {
+        bgAudio.play().catch(e => {});
       }
     });
   }
 }
 
-// 블루투스 이어폰 제거 감지 (HTML5 Audio / Web Audio Session API 연동)
+// 백그라운드 전환 시 오디오 세션 유지
 window.addEventListener('pagehide', () => {
   if (isTTSSpeaking && !isTTSPaused) {
     const bgAudio = document.getElementById('bgSilentAudio');
     if (bgAudio && bgAudio.paused) {
-      pauseTTS();
+      bgAudio.play().catch(e => {});
     }
   }
 });
