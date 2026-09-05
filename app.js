@@ -822,14 +822,30 @@ function togglePlayTTS() {
     return;
   }
 
+  // iOS/Safari lock screen suspend recovery: if paused, forcefully resume immediately
+  if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+    try {
+      window.speechSynthesis.resume();
+      isTTSSpeaking = true;
+      isTTSPaused = false;
+      updateTTSPlayButtons(true);
+      if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
+      return;
+    } catch(e) {}
+  }
+
+  if (isTTSSpeaking) {
+    stopTTS(false); // 일시정지 (개인통독앱 동일 사양)
+    return;
+  }
+
   if (isTTSPaused) {
     resumeTTS();
-  } else if (isTTSSpeaking) {
-    pauseTTS();
-  } else {
-    // 터치하거나 선택해둔 절부터 바로 재생 시작 및 플레이어 박스 열기
-    playFromVerse(state.selectedVerse || 1);
+    return;
   }
+
+  // 터치하거나 선택해둔 절부터 바로 재생 시작 및 플레이어 박스 열기
+  playFromVerse(state.selectedVerse || 1);
 }
 
 function playFromVerse(startVerse) {
@@ -882,10 +898,10 @@ function playFromVerse(startVerse) {
 let ttsKeepAliveTimer = null;
 
 function speakNextTTS() {
-  // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback
+  // Background Audio Heartbeat Keep-Alive for Screen Off / Lock Screen Playback (개인통독앱 100% 동일 사양)
   if (!window.ttsHeartbeatInterval) {
     window.ttsHeartbeatInterval = setInterval(function() {
-      if (isTTSSpeaking && !isTTSPaused && 'speechSynthesis' in window) {
+      if (isTTSSpeaking && 'speechSynthesis' in window) {
         if (window.speechSynthesis.paused) {
           try { window.speechSynthesis.resume(); } catch(e) {}
         }
@@ -893,30 +909,9 @@ function speakNextTTS() {
     }, 3000);
   }
 
-  if (!isTTSSpeaking || isTTSPaused) return;
-
-  if (currentTTSIndex >= ttsSpeechItems.length) {
-    // 낭독 재생 완료 시 자동으로 해당 장 '읽음 완료' 처리
-    markChapterRead(state.book, state.chapter);
-
-    if (repeatMode === 'CHAPTER') {
-      playFromVerse(1);
-    } else if (repeatMode === 'CONTINUOUS') {
-      const bInfo = BIBLE_BOOKS.find(b => b.name === state.book);
-      if (bInfo && state.chapter < bInfo.chapters) {
-        state.chapter++;
-        state.selectedVerse = 1;
-        updateChapterSelect();
-        renderBible();
-        setTimeout(() => {
-          playFromVerse(1);
-        }, 500);
-      } else {
-        stopTTS();
-      }
-    } else {
-      stopTTS();
-    }
+  if (!isTTSSpeaking || currentTTSIndex >= ttsSpeechItems.length) {
+    const wasSpeaking = isTTSSpeaking;
+    stopTTS(true);
     return;
   }
 
@@ -928,7 +923,6 @@ function speakNextTTS() {
     item.element.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  // iOS Safari SpeechSynthesis 백그라운드 멈춤 타이머 해제
   if (ttsKeepAliveTimer) {
     clearInterval(ttsKeepAliveTimer);
     ttsKeepAliveTimer = null;
@@ -941,14 +935,13 @@ function speakNextTTS() {
 
   // Global reference to prevent iOS WebKit SpeechSynthesisUtterance Garbage Collection
   window.currentUtterance = utterance;
-  window.isTTSJumping = false;
 
   let hasStepEnded = false;
 
   utterance.onend = () => {
     window.currentUtterance = null;
     if (window.isTTSJumping) return;
-    if (!isTTSSpeaking || isTTSPaused || hasStepEnded) return;
+    if (!isTTSSpeaking || hasStepEnded) return;
     hasStepEnded = true;
     if (repeatMode === 'VERSE') {
       speakNextTTS();
@@ -961,7 +954,7 @@ function speakNextTTS() {
   utterance.onerror = (e) => {
     window.currentUtterance = null;
     if (window.isTTSJumping) return;
-    if (!isTTSSpeaking || isTTSPaused || hasStepEnded) return;
+    if (!isTTSSpeaking || hasStepEnded) return;
     hasStepEnded = true;
     currentTTSIndex++;
     speakNextTTS();
@@ -1033,49 +1026,38 @@ function toggleRepeatMode() {
 }
 
 function pauseTTS() {
-  isTTSSpeaking = false;
-  isTTSPaused = true;
-  try {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.pause();
-    }
-  } catch (e) {}
-  
-  const bgAudio = document.getElementById('bgSilentAudio');
-  if (bgAudio) {
-    try { bgAudio.pause(); } catch(e) {}
-  }
-  
-  updateTTSPlayButtons(false);
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.playbackState = "paused";
-  }
+  stopTTS(false);
 }
 
 function resumeTTS() {
-  isTTSSpeaking = true;
-  isTTSPaused = false;
-  
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
     try { bgAudio.play().catch(e => {}); } catch(e) {}
   }
   
-  try {
-    if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+  if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+    try {
       window.speechSynthesis.resume();
-    } else {
-      speakNextTTS();
-    }
-  } catch (e) {
-    speakNextTTS();
+      isTTSSpeaking = true;
+      isTTSPaused = false;
+      updateTTSPlayButtons(true);
+      if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
+      return;
+    } catch(e) {}
   }
-  
-  updateTTSPlayButtons(true);
+
+  // iOS에서 pause 상태 후 utterance가 해제된 경우 구절부터 새로 낭독 재개
+  if (ttsSpeechItems.length === 0) {
+    playFromVerse(state.selectedVerse || 1);
+    return;
+  }
+
+  safeCancelSpeech();
+  isTTSSpeaking = true;
+  isTTSPaused = false;
   if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.playbackState = "playing";
-  }
+  updateTTSPlayButtons(true);
+  speakNextTTS();
 }
 
 window.isTTSJumping = false;
@@ -1166,10 +1148,23 @@ function updateMediaSession() {
 function setupMediaSessionHandlers() {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => {
-      resumeTTS();
+      const bgAudio = document.getElementById('bgSilentAudio');
+      if (bgAudio) {
+        try { bgAudio.play().catch(e => {}); } catch(e) {}
+      }
+      if ('speechSynthesis' in window) {
+        if (window.speechSynthesis.paused) {
+          try { window.speechSynthesis.resume(); } catch(e) {}
+          isTTSSpeaking = true;
+          isTTSPaused = false;
+          updateTTSPlayButtons(true);
+        } else if (!isTTSSpeaking) {
+          togglePlayTTS();
+        }
+      }
     });
     navigator.mediaSession.setActionHandler('pause', () => {
-      pauseTTS();
+      stopTTS(false);
     });
     navigator.mediaSession.setActionHandler('stop', () => {
       stopTTS(true);
