@@ -113,6 +113,10 @@ function init() {
     renderBible();
   });
 
+  // 저장된 위치 및 역본 선택값 드롭다운 초기화
+  if (primaryTranslationSelect) primaryTranslationSelect.value = state.translation;
+  if (secondaryTranslationSelect) secondaryTranslationSelect.value = state.secondaryTranslation;
+
   primaryTranslationSelect.addEventListener("change", (e) => {
     state.translation = e.target.value;
     renderBible();
@@ -811,7 +815,8 @@ function togglePlayTTS() {
     return;
   }
 
-  // iOS Safari touch unlock & 백그라운드 오디오 준비
+  // iOS Safari touch unlock & 백그라운드 오디오 준비 (HTML5 Audio + Web Audio API 듀얼 유지)
+  startWebAudioKeepAlive();
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
     bgAudio.play().catch(e => {});
@@ -954,7 +959,8 @@ function speakNextTTS() {
 
   window.speechSynthesis.speak(utterance);
 
-  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 재개
+  // iOS Safari 백그라운드 재생 지속을 위한 무음 오디오 및 Web Audio 하트비트 엔진 재개
+  startWebAudioKeepAlive();
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio && bgAudio.paused) {
     bgAudio.play().catch(e => console.log("bgAudio play catch:", e));
@@ -1076,9 +1082,51 @@ function resumeTTS() {
   }
 }
 
+let audioCtx = null;
+let keepAliveOsc = null;
+
+function startWebAudioKeepAlive() {
+  try {
+    if (!audioCtx) {
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtxClass) {
+        audioCtx = new AudioCtxClass();
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    if (audioCtx && !keepAliveOsc) {
+      keepAliveOsc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.value = 0.0001; // 거의 무음에 가까운 하트비트 소리
+      keepAliveOsc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      keepAliveOsc.start();
+    }
+  } catch (e) {
+    console.log("WebAudio KeepAlive Catch:", e);
+  }
+}
+
+function stopWebAudioKeepAlive() {
+  try {
+    if (keepAliveOsc) {
+      keepAliveOsc.stop();
+      keepAliveOsc.disconnect();
+      keepAliveOsc = null;
+    }
+    if (audioCtx && audioCtx.state !== 'closed') {
+      audioCtx.suspend();
+    }
+  } catch (e) {}
+}
+
 function stopTTS() {
   isTTSSpeaking = false;
   isTTSPaused = false;
+
+  stopWebAudioKeepAlive();
 
   if (ttsKeepAliveTimer) {
     clearInterval(ttsKeepAliveTimer);
