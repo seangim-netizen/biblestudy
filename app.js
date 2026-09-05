@@ -1033,32 +1033,35 @@ function pauseTTS() {
 function resumeTTS() {
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
+    bgAudio.currentTime = 0;
     try { bgAudio.play().catch(e => {}); } catch(e) {}
   }
+
+  isTTSSpeaking = true;
+  isTTSPaused = false;
+  if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
+  updateTTSPlayButtons(true);
   
   if ('speechSynthesis' in window && window.speechSynthesis.paused) {
     try {
       window.speechSynthesis.resume();
-      isTTSSpeaking = true;
-      isTTSPaused = false;
-      updateTTSPlayButtons(true);
-      if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
       return;
     } catch(e) {}
   }
 
-  // iOS 잠금 화면에서 pause 상태 후 utterance가 해제된 경우 해당 구절부터 낭독 재개
+  // iOS 잠금 화면에서 pause 상태 후 utterance가 해제된 경우 100ms 지연 후 재개하여 오디오 세션 동기화
   if (ttsSpeechItems.length === 0) {
     playFromVerse(state.selectedVerse || 1);
     return;
   }
 
   safeCancelSpeech();
-  isTTSSpeaking = true;
-  isTTSPaused = false;
-  if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
-  updateTTSPlayButtons(true);
-  speakNextTTS();
+  setTimeout(function() {
+    if (isTTSSpeaking && !isTTSPaused) {
+      window.isTTSJumping = false;
+      speakNextTTS();
+    }
+  }, 100);
 }
 
 window.isTTSJumping = false;
@@ -1135,10 +1138,10 @@ function updateTTSPlayButtons(isPlaying) {
 function updateMediaSession() {
   if ('mediaSession' in navigator && window.MediaMetadata) {
     const unit = state.book === "시편" ? "편" : "장";
-    const absoluteLogo = new URL('symbol_logo.png', window.location.href).href;
+    const absoluteLogo = new URL('app_logo.png?v=7700', window.location.href).href;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `${state.book} ${state.chapter}${unit} ${state.selectedVerse || 1}절`,
-      artist: `성경 낭독 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
+      artist: `성경 낭독 - 개인용 성경앱 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
       album: "개인용 성경앱",
       artwork: [
         { src: absoluteLogo, sizes: '512x512', type: 'image/png' }
@@ -1150,20 +1153,7 @@ function updateMediaSession() {
 function setupMediaSessionHandlers() {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => {
-      const bgAudio = document.getElementById('bgSilentAudio');
-      if (bgAudio) {
-        try { bgAudio.play().catch(e => {}); } catch(e) {}
-      }
-      if ('speechSynthesis' in window) {
-        if (window.speechSynthesis.paused) {
-          try { window.speechSynthesis.resume(); } catch(e) {}
-          isTTSSpeaking = true;
-          isTTSPaused = false;
-          updateTTSPlayButtons(true);
-        } else if (!isTTSSpeaking) {
-          togglePlayTTS();
-        }
-      }
+      resumeTTS();
     });
     navigator.mediaSession.setActionHandler('pause', () => {
       stopTTS(false);
