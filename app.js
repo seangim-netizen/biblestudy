@@ -1117,7 +1117,7 @@ function speakNextTTS() {
     try {
       const unit = state.book === "시편" ? "편" : "장";
       const infoText = `${state.book} ${state.chapter}${unit} ${item.verse}절: ${item.text}`;
-      const absoluteLogo = new URL('app_logo.png?v=8000', window.location.href).href;
+      const absoluteLogo = new URL('app_logo.png?v=9100', window.location.href).href;
       navigator.mediaSession.metadata = new MediaMetadata({
         title: infoText.length > 35 ? infoText.substring(0, 35) + '...' : infoText,
         artist: `성경 낭독 (개인용 성경앱)`,
@@ -1369,7 +1369,7 @@ function updateTTSPlayButtons(isPlaying) {
 function updateMediaSession() {
   if ('mediaSession' in navigator && window.MediaMetadata) {
     const unit = state.book === "시편" ? "편" : "장";
-    const absoluteLogo = new URL('app_logo.png?v=7700', window.location.href).href;
+    const absoluteLogo = new URL('app_logo.png?v=9100', window.location.href).href;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `${state.book} ${state.chapter}${unit} ${state.selectedVerse || 1}절`,
       artist: `성경 낭독 - 개인용 성경앱 (${TRANSLATIONS[state.translation]?.name || "개역개정"})`,
