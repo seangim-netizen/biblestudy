@@ -271,7 +271,8 @@ function init() {
     searchResultsList.innerHTML = "";
     searchResultSummary.textContent = `'${query}' 검색 중...`;
 
-    let results = [];
+    let resultsByBook = {}; // { "출애굽기": [ { chapter, verse, text }, ... ] }
+    let totalCount = 0;
     let queryLower = query.toLowerCase();
 
     for (let bookName in db) {
@@ -281,66 +282,91 @@ function init() {
         for (let vNum in chData) {
           let verseText = chData[vNum];
           if (verseText && verseText.toLowerCase().includes(queryLower)) {
-            results.push({
-              book: bookName,
+            if (!resultsByBook[bookName]) {
+              resultsByBook[bookName] = [];
+            }
+            resultsByBook[bookName].push({
               chapter: parseInt(chNum),
               verse: parseInt(vNum),
               text: verseText
             });
+            totalCount++;
           }
         }
       }
     }
 
-    searchResultSummary.textContent = `총 ${results.length}개의 구절이 검색되었습니다. (${tObj.name} 기준)`;
+    searchResultSummary.textContent = `총 ${totalCount}개의 구절이 검색되었습니다. (${tObj.name} 기준)`;
 
-    if (results.length === 0) {
+    if (totalCount === 0) {
       searchResultsList.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">일치하는 구절이 없습니다.</div>';
       return;
     }
 
-    // 결과 목록 렌더링 (최대 300개 제한)
-    const displayResults = results.slice(0, 300);
-    displayResults.forEach(item => {
-      const itemEl = document.createElement("div");
-      itemEl.className = "search-result-item";
-      
-      const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-      const highlightedText = item.text.replace(regex, '<mark>$1</mark>');
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
 
-      itemEl.innerHTML = `
-        <div class="search-result-header">📖 ${item.book} ${item.chapter}:${item.verse}</div>
-        <div class="search-result-text">${highlightedText}</div>
+    // 각 성경책 별로 그룹화하여 카드 및 토글 렌더링
+    for (let bookName in resultsByBook) {
+      const bookVerses = resultsByBook[bookName];
+
+      const groupEl = document.createElement("div");
+      groupEl.className = "search-book-group";
+
+      const headerEl = document.createElement("div");
+      headerEl.className = "search-book-header";
+      headerEl.innerHTML = `
+        <span class="search-book-title">📘 ${bookName} (${bookVerses.length}개 구절)</span>
+        <span class="search-book-arrow">▲</span>
       `;
 
-      itemEl.addEventListener("click", () => {
-        state.book = item.book;
-        state.chapter = item.chapter;
-        state.selectedVerse = item.verse;
-        saveLastReadLocation();
-        updateChapterSelect();
-        renderBible();
-        searchModal.classList.add("hidden");
+      const listEl = document.createElement("div");
+      listEl.className = "search-book-verses-list";
 
-        // 해당 절 위치로 스크롤
-        setTimeout(() => {
-          const verseEl = document.getElementById(`verse-${item.verse}`);
-          if (verseEl) {
-            verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            verseEl.classList.add("highlight-verse");
-            setTimeout(() => verseEl.classList.remove("highlight-verse"), 2500);
-          }
-        }, 150);
+      bookVerses.forEach(item => {
+        const itemEl = document.createElement("div");
+        itemEl.className = "search-result-item";
+        
+        const highlightedText = item.text.replace(regex, '<mark>$1</mark>');
+
+        itemEl.innerHTML = `
+          <div class="search-result-header">📍 ${bookName} ${item.chapter}:${item.verse}</div>
+          <div class="search-result-text">${highlightedText}</div>
+        `;
+
+        itemEl.addEventListener("click", () => {
+          state.book = bookName;
+          state.chapter = item.chapter;
+          state.selectedVerse = item.verse;
+          saveLastReadLocation();
+          updateChapterSelect();
+          renderBible();
+          searchModal.classList.add("hidden");
+
+          // 해당 절 위치로 스크롤 및 하이라이트
+          setTimeout(() => {
+            const verseEl = document.getElementById(`verse-${item.verse}`);
+            if (verseEl) {
+              verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              verseEl.classList.add("highlight-verse");
+              setTimeout(() => verseEl.classList.remove("highlight-verse"), 2500);
+            }
+          }, 150);
+        });
+
+        listEl.appendChild(itemEl);
       });
 
-      searchResultsList.appendChild(itemEl);
-    });
+      headerEl.addEventListener("click", () => {
+        listEl.classList.toggle("collapsed");
+        const arrow = headerEl.querySelector(".search-book-arrow");
+        if (arrow) {
+          arrow.textContent = listEl.classList.contains("collapsed") ? "▼" : "▲";
+        }
+      });
 
-    if (results.length > 300) {
-      const moreEl = document.createElement("div");
-      moreEl.style.cssText = "text-align:center; padding:10px; color:#888; font-size:0.85rem;";
-      moreEl.textContent = `검색 결과가 너무 많아 상위 300개 구절만 표시합니다.`;
-      searchResultsList.appendChild(moreEl);
+      groupEl.appendChild(headerEl);
+      groupEl.appendChild(listEl);
+      searchResultsList.appendChild(groupEl);
     }
   };
 

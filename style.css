@@ -85,7 +85,7 @@ body.theme-dark {
 }
 
 .header-logo-img {
-  height: 32px;
+  height: 38px;
   width: auto;
   display: block;
 }
@@ -946,8 +946,39 @@ body:has(.tts-player-box:not(.hidden)) .app-content {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   padding-right: 4px;
+}
+
+.search-book-group {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--card-bg);
+}
+
+.search-book-header {
+  padding: 10px 14px;
+  background-color: rgba(139, 90, 43, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  cursor: pointer;
+  user-select: none;
+}
+
+.search-book-verses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.search-book-verses-list.collapsed {
+  display: none;
 }
 
 .search-result-item {
