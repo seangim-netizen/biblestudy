@@ -56,13 +56,17 @@ function saveLastReadLocation() {
   }));
 }
 
-// TTS 상태
+// TTS 상태 및 설정 복원
 let isTTSSpeaking = false;
 let isTTSPaused = false;
 let currentTTSIndex = 0;
 let ttsSpeechItems = [];
-let ttsRate = 1.0; // 1.0, 1.2, 1.5, 0.8
-let repeatMode = 'CONTINUOUS'; // 'CONTINUOUS', 'CHAPTER', 'VERSE'
+
+// localStorage 설정 저장/복원
+const savedTheme = localStorage.getItem("bible_app_theme") || "sepia"; // "dark" or "sepia"
+const savedFontSize = parseFloat(localStorage.getItem("bible_app_font_size") || "1.1");
+let ttsRate = parseFloat(localStorage.getItem("bible_app_tts_rate") || "1.0");
+let repeatMode = localStorage.getItem("bible_app_repeat_mode") || 'CONTINUOUS';
 
 // DOM 요소
 let quickBookSelect, quickChapterSelect, primaryTranslationSelect, secondaryTranslationSelect, btnPrevChapter, btnNextChapter, bibleViewerEl;
@@ -86,6 +90,9 @@ function init() {
   btnTTSRepeat = document.getElementById("btnTTSRepeat");
   btnAudioTTSStop = document.getElementById("btnAudioTTSStop");
   ttsPlayerBox = document.getElementById("ttsPlayerBox");
+
+  if (btnTTSSpeed) btnTTSSpeed.textContent = `🐢 ${ttsRate.toFixed(1)}x`;
+  updateRepeatBtnUI();
 
   // 책 선택 드롭다운 채우기
   quickBookSelect.innerHTML = "";
@@ -325,11 +332,14 @@ function init() {
   const btnModalFontInc = document.getElementById("btnModalFontInc");
   const fontRatioLabel = document.getElementById("fontRatioLabel");
 
-  let currentFontSize = 1.1; // 기본 rem
+  let currentFontSize = savedFontSize;
   const updateFontDisplay = () => {
     document.documentElement.style.setProperty("--verse-font-size", `${currentFontSize.toFixed(2)}rem`);
     if (fontRatioLabel) fontRatioLabel.textContent = `${currentFontSize.toFixed(1)}x`;
+    localStorage.setItem("bible_app_font_size", currentFontSize.toString());
   };
+  // 초기 폰트크기 적용
+  updateFontDisplay();
 
   if (btnModalFontDec) {
     btnModalFontDec.addEventListener("click", () => {
@@ -353,21 +363,33 @@ function init() {
   const btnThemeSepia = document.getElementById("btnThemeSepia");
   const btnThemeDark = document.getElementById("btnThemeDark");
 
-  if (btnThemeSepia) {
-    btnThemeSepia.addEventListener("click", () => {
+  const applyTheme = (themeName) => {
+    if (themeName === "dark") {
+      document.body.classList.remove("theme-sepia");
+      document.body.classList.add("theme-dark");
+      if (btnThemeDark) btnThemeDark.classList.add("active");
+      if (btnThemeSepia) btnThemeSepia.classList.remove("active");
+    } else {
       document.body.classList.remove("theme-dark");
       document.body.classList.add("theme-sepia");
-      btnThemeSepia.classList.add("active");
+      if (btnThemeSepia) btnThemeSepia.classList.add("active");
       if (btnThemeDark) btnThemeDark.classList.remove("active");
+    }
+    localStorage.setItem("bible_app_theme", themeName);
+  };
+
+  // 초기 저장된 테마 적용
+  applyTheme(savedTheme);
+
+  if (btnThemeSepia) {
+    btnThemeSepia.addEventListener("click", () => {
+      applyTheme("sepia");
     });
   }
 
   if (btnThemeDark) {
     btnThemeDark.addEventListener("click", () => {
-      document.body.classList.remove("theme-sepia");
-      document.body.classList.add("theme-dark");
-      btnThemeDark.classList.add("active");
-      if (btnThemeSepia) btnThemeSepia.classList.remove("active");
+      applyTheme("dark");
     });
   }
 
@@ -1040,6 +1062,7 @@ function toggleTTSSpeed() {
   let currIdx = rates.indexOf(ttsRate);
   let nextIdx = (currIdx + 1) % rates.length;
   ttsRate = rates[nextIdx];
+  localStorage.setItem("bible_app_tts_rate", ttsRate.toString());
   if (btnTTSSpeed) btnTTSSpeed.textContent = `🐢 ${ttsRate.toFixed(1)}x`;
 
   if (isTTSSpeaking && !isTTSPaused) {
@@ -1050,22 +1073,26 @@ function toggleTTSSpeed() {
 function toggleRepeatMode() {
   if (repeatMode === 'CONTINUOUS') {
     repeatMode = 'CHAPTER';
-    if (btnTTSRepeat) {
-      btnTTSRepeat.textContent = "🔁 장반복";
-      btnTTSRepeat.classList.add("active");
-    }
   } else if (repeatMode === 'CHAPTER') {
     repeatMode = 'VERSE';
-    if (btnTTSRepeat) {
-      btnTTSRepeat.textContent = "🔂 절반복";
-      btnTTSRepeat.classList.add("active");
-    }
   } else {
     repeatMode = 'CONTINUOUS';
-    if (btnTTSRepeat) {
-      btnTTSRepeat.textContent = "🔄 연속";
-      btnTTSRepeat.classList.remove("active");
-    }
+  }
+  localStorage.setItem("bible_app_repeat_mode", repeatMode);
+  updateRepeatBtnUI();
+}
+
+function updateRepeatBtnUI() {
+  if (!btnTTSRepeat) return;
+  if (repeatMode === 'CHAPTER') {
+    btnTTSRepeat.textContent = "🔁 장반복";
+    btnTTSRepeat.classList.add("active");
+  } else if (repeatMode === 'VERSE') {
+    btnTTSRepeat.textContent = "🔂 절반복";
+    btnTTSRepeat.classList.add("active");
+  } else {
+    btnTTSRepeat.textContent = "🔄 연속";
+    btnTTSRepeat.classList.remove("active");
   }
 }
 
