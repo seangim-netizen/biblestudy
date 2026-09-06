@@ -231,6 +231,128 @@ function init() {
   const btnCloseSettings = document.getElementById("btnCloseSettings");
   const settingsModal = document.getElementById("settingsModal");
 
+  // 성경 검색 모달 요소
+  const btnOpenSearch = document.getElementById("btnOpenSearch");
+  const btnCloseSearch = document.getElementById("btnCloseSearch");
+  const searchModal = document.getElementById("searchModal");
+  const searchInput = document.getElementById("searchInput");
+  const btnExecuteSearch = document.getElementById("btnExecuteSearch");
+  const searchResultSummary = document.getElementById("searchResultSummary");
+  const searchResultsList = document.getElementById("searchResultsList");
+
+  if (btnOpenSearch) {
+    btnOpenSearch.addEventListener("click", () => {
+      searchModal.classList.remove("hidden");
+      setTimeout(() => searchInput && searchInput.focus(), 100);
+    });
+  }
+
+  if (btnCloseSearch) {
+    btnCloseSearch.addEventListener("click", () => {
+      searchModal.classList.add("hidden");
+    });
+  }
+
+  const executeSearch = () => {
+    if (!searchInput) return;
+    const query = searchInput.value.trim();
+    if (!query) {
+      alert("검색어를 입력해 주세요.");
+      return;
+    }
+
+    const tObj = TRANSLATIONS[state.translation] || TRANSLATIONS["KG"];
+    const db = window[tObj.varName] || window.BIBLE_66_DB_KG;
+    if (!db) {
+      searchResultSummary.textContent = "성경 DB를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.";
+      return;
+    }
+
+    searchResultsList.innerHTML = "";
+    searchResultSummary.textContent = `'${query}' 검색 중...`;
+
+    let results = [];
+    let queryLower = query.toLowerCase();
+
+    for (let bookName in db) {
+      let bookData = db[bookName];
+      for (let chNum in bookData) {
+        let chData = bookData[chNum];
+        for (let vNum in chData) {
+          let verseText = chData[vNum];
+          if (verseText && verseText.toLowerCase().includes(queryLower)) {
+            results.push({
+              book: bookName,
+              chapter: parseInt(chNum),
+              verse: parseInt(vNum),
+              text: verseText
+            });
+          }
+        }
+      }
+    }
+
+    searchResultSummary.textContent = `총 ${results.length}개의 구절이 검색되었습니다. (${tObj.name} 기준)`;
+
+    if (results.length === 0) {
+      searchResultsList.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">일치하는 구절이 없습니다.</div>';
+      return;
+    }
+
+    // 결과 목록 렌더링 (최대 300개 제한)
+    const displayResults = results.slice(0, 300);
+    displayResults.forEach(item => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "search-result-item";
+      
+      const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      const highlightedText = item.text.replace(regex, '<mark>$1</mark>');
+
+      itemEl.innerHTML = `
+        <div class="search-result-header">📖 ${item.book} ${item.chapter}:${item.verse}</div>
+        <div class="search-result-text">${highlightedText}</div>
+      `;
+
+      itemEl.addEventListener("click", () => {
+        state.book = item.book;
+        state.chapter = item.chapter;
+        state.selectedVerse = item.verse;
+        saveLastReadLocation();
+        updateChapterSelect();
+        renderBible();
+        searchModal.classList.add("hidden");
+
+        // 해당 절 위치로 스크롤
+        setTimeout(() => {
+          const verseEl = document.getElementById(`verse-${item.verse}`);
+          if (verseEl) {
+            verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            verseEl.classList.add("highlight-verse");
+            setTimeout(() => verseEl.classList.remove("highlight-verse"), 2500);
+          }
+        }, 150);
+      });
+
+      searchResultsList.appendChild(itemEl);
+    });
+
+    if (results.length > 300) {
+      const moreEl = document.createElement("div");
+      moreEl.style.cssText = "text-align:center; padding:10px; color:#888; font-size:0.85rem;";
+      moreEl.textContent = `검색 결과가 너무 많아 상위 300개 구절만 표시합니다.`;
+      searchResultsList.appendChild(moreEl);
+    }
+  };
+
+  if (btnExecuteSearch) {
+    btnExecuteSearch.addEventListener("click", executeSearch);
+  }
+  if (searchInput) {
+    searchInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") executeSearch();
+    });
+  }
+
   const btnOpenBoardTab = document.getElementById("btnOpenBoardTab");
   const btnCloseBoardTab = document.getElementById("btnCloseBoardTab");
   const boardPageTab = document.getElementById("boardPageTab");
