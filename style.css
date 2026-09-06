@@ -45,7 +45,7 @@ body.theme-sepia {
 }
 
 /* 2. 다크/어두운 테마 */
-body.theme-dark {
+body.theme-dark, html.theme-dark body {
   --bg-color: #1a1a1a;
   --text-color: #e0e0e0;
   --card-bg: #2a2a2a;

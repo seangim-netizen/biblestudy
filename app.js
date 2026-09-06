@@ -503,11 +503,15 @@ function init() {
 
   const applyTheme = (themeName) => {
     if (themeName === "dark") {
+      document.documentElement.classList.remove("theme-sepia");
+      document.documentElement.classList.add("theme-dark");
       document.body.classList.remove("theme-sepia");
       document.body.classList.add("theme-dark");
       if (btnThemeDark) btnThemeDark.classList.add("active");
       if (btnThemeSepia) btnThemeSepia.classList.remove("active");
     } else {
+      document.documentElement.classList.remove("theme-dark");
+      document.documentElement.classList.add("theme-sepia");
       document.body.classList.remove("theme-dark");
       document.body.classList.add("theme-sepia");
       if (btnThemeSepia) btnThemeSepia.classList.add("active");
