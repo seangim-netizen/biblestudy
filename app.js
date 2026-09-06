@@ -552,7 +552,7 @@ function init() {
 
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=8000').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=9000').then((reg) => {
       reg.update();
     }).catch(e => {});
   }
