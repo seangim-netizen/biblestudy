@@ -339,18 +339,8 @@ function init() {
           state.selectedVerse = item.verse;
           saveLastReadLocation();
           updateChapterSelect();
-          renderBible();
+          renderBible(item.verse);
           searchModal.classList.add("hidden");
-
-          // 해당 절 위치로 스크롤 및 하이라이트
-          setTimeout(() => {
-            const verseEl = document.getElementById(`verse-${item.verse}`);
-            if (verseEl) {
-              verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              verseEl.classList.add("highlight-verse");
-              setTimeout(() => verseEl.classList.remove("highlight-verse"), 2500);
-            }
-          }, 150);
         });
 
         listEl.appendChild(itemEl);
@@ -827,7 +817,7 @@ function ensureTranslationLoaded(tCode, callback) {
   }
 }
 
-function renderBible() {
+function renderBible(targetVerse = null) {
   bibleViewerEl.innerHTML = "";
 
   const unit = state.book === "시편" ? "편" : "장";
@@ -861,14 +851,31 @@ function renderBible() {
         const sVerses = (sDb && sDb[state.book] && sDb[state.book][String(state.chapter)]) ? sDb[state.book][String(state.chapter)] : [];
 
         renderVerseCards(pVerses, sVerses);
+        onBibleRenderComplete(targetVerse);
       });
     } else {
       renderVerseCards(pVerses, null);
+      onBibleRenderComplete(targetVerse);
     }
-    updateReadBadgeState();
-    saveLastReadLocation();
-    window.scrollTo({ top: 0, behavior: 'instant' });
   });
+}
+
+function onBibleRenderComplete(targetVerse) {
+  updateReadBadgeState();
+  saveLastReadLocation();
+
+  if (targetVerse) {
+    setTimeout(() => {
+      const verseEl = document.getElementById(`verse-${targetVerse}`);
+      if (verseEl) {
+        verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        verseEl.classList.add("highlight-verse");
+        setTimeout(() => verseEl.classList.remove("highlight-verse"), 2500);
+      }
+    }, 100);
+  } else {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
 }
 
 // 메모 데이터 Persistence (localStorage)
@@ -917,6 +924,7 @@ function renderVerseCards(pVerses, sVerses) {
 
     const card = document.createElement("div");
     card.className = "verse-card";
+    card.id = `verse-${verseNum}`;
     card.setAttribute("data-verse", verseNum);
 
     // 단일 터치/클릭: 순수 구절 선택 및 하이라이트
