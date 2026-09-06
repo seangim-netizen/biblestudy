@@ -279,19 +279,20 @@ function init() {
       let bookData = db[bookName];
       for (let chNum in bookData) {
         let chData = bookData[chNum];
-        for (let vNum in chData) {
-          let verseText = chData[vNum];
-          if (verseText && verseText.toLowerCase().includes(queryLower)) {
-            if (!resultsByBook[bookName]) {
-              resultsByBook[bookName] = [];
+        if (Array.isArray(chData)) {
+          chData.forEach((verseText, idx) => {
+            if (verseText && verseText.toLowerCase().includes(queryLower)) {
+              if (!resultsByBook[bookName]) {
+                resultsByBook[bookName] = [];
+              }
+              resultsByBook[bookName].push({
+                chapter: parseInt(chNum),
+                verse: idx + 1,
+                text: verseText
+              });
+              totalCount++;
             }
-            resultsByBook[bookName].push({
-              chapter: parseInt(chNum),
-              verse: parseInt(vNum),
-              text: verseText
-            });
-            totalCount++;
-          }
+          });
         }
       }
     }
