@@ -1264,7 +1264,6 @@ function pauseTTS() {
 function resumeTTS() {
   const bgAudio = document.getElementById('bgSilentAudio');
   if (bgAudio) {
-    bgAudio.currentTime = 0;
     try { bgAudio.play().catch(e => {}); } catch(e) {}
   }
 
@@ -1273,15 +1272,17 @@ function resumeTTS() {
   if (ttsPlayerBox) ttsPlayerBox.classList.remove("hidden");
   updateTTSPlayButtons(true);
   
-  if ('speechSynthesis' in window && window.speechSynthesis.paused) {
-    try {
-      window.speechSynthesis.resume();
-      return;
-    } catch(e) {}
+  if ('speechSynthesis' in window) {
+    if (window.speechSynthesis.paused) {
+      try {
+        window.speechSynthesis.resume();
+        return;
+      } catch(e) {}
+    }
   }
 
-  // iOS 잠금 화면에서 pause 상태 후 utterance가 해제된 경우 100ms 지연 후 재개하여 오디오 세션 동기화
-  if (ttsSpeechItems.length === 0) {
+  // iOS 잠금 화면에서 pause 또는 Screen-off 후 SpeechSynthesisUtterance가 해제되거나 비워진 경우
+  if (ttsSpeechItems.length === 0 || !window.speechSynthesis.speaking) {
     playFromVerse(state.selectedVerse || 1);
     return;
   }

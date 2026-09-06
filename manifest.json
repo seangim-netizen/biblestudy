@@ -2,16 +2,16 @@
   "name": "개인용 성경앱",
   "short_name": "성경앱",
   "description": "오프라인(비행기모드) 및 다국어 대조 낭독을 지원하는 성경",
-  "id": "biblestudy-pwa-v9100",
+  "id": "biblestudy-pwa-v9200",
   "scope": "./",
-  "start_url": "./index.html?v=9100",
+  "start_url": "./index.html?v=9200",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#2c2c2c",
   "theme_color": "#2c2c2c",
   "icons": [
     {
-      "src": "app_logo.png?v=9100",
+      "src": "app_logo.png?v=9200",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
